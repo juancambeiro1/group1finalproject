@@ -1,0 +1,347 @@
+---
+title: "replication"
+author: "group 1"
+date: "2023-04-19"
+output: html_document
+---
+# data
+Data is on the Italian population, total cases, deaths, recovered, and currently positive cases. Also have data on number of people in home isolation, hospitalized, and ICU.
+
+```{r}
+#######################################
+# DATA
+#######################################
+
+# Italian population
+population <- 60e6
+
+# Data from 20 February to 5 April (46 days):
+# Total Cases
+TotalCases <- c(3, 20, 79, 132, 219, 322, 400, 650, 888, 1128, 1694, 2036, 2502, 3089, 3858, 4636, 5883, 7375, 9172, 10149, 12462, 15113, 17660, 21157, 24747, 27980, 31506, 35713, 41035, 47021, 53578, 59138, 63927, 69176, 74386, 80539, 86498, 92472, 97689, 101739, 105792, 110574, 115242, 119827, 124632, 128948) / population # D+R+T+E+diagnosed_H
+# Deaths
+Deaths <- c(0, 1, 2, 2, 5, 10, 12, 17, 21, 29, 34, 52, 79, 107, 148, 197, 233, 366, 463, 631, 827, 1016, 1266, 1441, 1809, 2158, 2503, 2978, 3405, 4032, 4825, 5476, 6077, 6820, 7503, 8165, 9134, 10023, 10779, 11591, 12428, 13155, 13915, 14681, 15362, 15887) / population # E
+# Recovered
+Recovered <- c(0, 0, 0, 1, 1, 1, 3, 45, 46, 50, 83, 149, 160, 276, 414, 523, 589, 622, 724, 1004, 1045, 1258, 1439, 1966, 2335, 2749, 2941, 4025, 4440, 5129, 6072, 7024, 7432, 8326, 9362, 10361, 10950, 12384, 13030, 14620, 15729, 16847, 18278, 19758, 20996, 21815) / population # H_diagnosed
+# Currently Positive
+Positive <- c(3, 19, 77, 129, 213, 311, 385, 588, 821, 1049, 1577, 1835, 2263, 2706, 3296, 3916, 5061, 6387, 7985, 8514, 10590, 12839, 14955, 17750, 20603, 23073, 26062, 28710, 33190, 37860, 42681, 46638, 50418, 54030, 57521, 62013, 66414, 70065, 73880, 75528, 77635, 80572, 83049, 85388, 88274, 91246) / population # D+R+T
+
+# Data from 23 February to 5 April (from day 4 to day 46)
+# Currently positive: isolated at home
+HomeIsolation <- c(49, 91, 162, 221, 284, 412, 543, 798, 927, 1000, 1065, 1155, 1060, 1843, 2180, 2936, 2599, 3724, 5036, 6201, 7860, 9268, 10197, 11108, 12090, 14935, 19185, 22116, 23783, 26522, 28697, 30920, 33648, 36653, 39533, 42588, 43752, 45420, 48134, 50456, 52579, 55270, 58320) / population # D
+# Currently positive: hospitalised
+Hospitalised <- c(54, 99, 114, 128, 248, 345, 401, 639, 742, 1034, 1346, 1790, 2394, 2651, 3557, 4316, 5038, 5838, 6650, 7426, 8372, 9663, 11025, 12894, 14363, 15757, 16020, 17708, 19846, 20692, 21937, 23112, 24753, 26029, 26676, 27386, 27795, 28192, 28403, 28540, 28741, 29010, 28949) / population # R
+# Currently positive: ICU
+ICU <- c(26, 23, 35, 36, 56, 64, 105, 140, 166, 229, 295, 351, 462, 567, 650, 733, 877, 1028, 1153, 1328, 1518, 1672, 1851, 2060, 2257, 2498, 2655, 2857, 3009, 3204, 3396, 3489, 3612, 3732, 3856, 3906, 3981, 4023, 4035, 4053, 4068, 3994, 3977) / population # T
+```
+
+# parameters
+
+defined various parameters for the simulation, such as transmission rates, detection rates, worsening rates, mortality rate, and recovery rates. we've also calculated the initial reproduction number (R0).
+
+```{r}
+# Simulation horizon: CAN BE MODIFIED AT ONE'S WILL PROVIDED THAT IT IS AT
+# LEAST EQUAL TO THE NUMBER OF DAYS FOR WHICH DATA ARE AVAILABLE
+horizon <- 350
+
+# Plot yes/no: SET TO 1 IF PDF FIGURES MUST BE GENERATED, 0 OTHERWISE
+plotPDF <- 0
+
+# Time-step for Euler discretisation of the continuous-time system
+step <- 0.01
+
+# Transmission rate due to contacts with UNDETECTED asymptomatic infected
+alpha <- 0.57
+# Transmission rate due to contacts with DETECTED asymptomatic infected
+beta <- 0.0114
+# Transmission rate due to contacts with UNDETECTED symptomatic infected
+gamma <- 0.456
+# Transmission rate due to contacts with DETECTED symptomatic infected
+delta <- 0.0114
+
+# Detection rate for ASYMPTOMATIC
+epsilon <- 0.171
+# Detection rate for SYMPTOMATIC
+theta <- 0.3705
+
+# Worsening rate: UNDETECTED asymptomatic infected becomes symptomatic
+zeta <- 0.1254
+# Worsening rate: DETECTED asymptomatic infected becomes symptomatic
+eta <- 0.1254
+
+# Worsening rate: UNDETECTED symptomatic infected develop life-threatening
+# symptoms
+mu <- 0.0171
+# Worsening rate: DETECTED symptomatic infected develop life-threatening
+# symptoms
+nu <- 0.0274
+
+# Mortality rate for infected with life-threatening symptoms
+tau <- 0.01
+
+# Recovery rate for undetected asymptomatic infected
+lambda <- 0.0342
+# Recovery rate for detected asymptomatic infected
+rho <- 0.0342
+# Recovery rate for undetected symptomatic infected
+kappa <- 0.0171
+# Recovery rate for detected symptomatic infected
+xi <- 0.0171
+# Recovery rate for life-threatened symptomatic infected
+sigma <- 0.0171
+
+# DEFINITIONS
+
+# Parameters
+r1 <- epsilon + zeta + lambda
+r2 <- eta + rho
+r3 <- theta + mu + kappa
+r4 <- nu + xi
+r5 <- sigma + tau
+
+# Initial R0
+initial_R0 <- alpha / r1 + beta * epsilon / (r1 * r2) + gamma * zeta / (r1 * r3) + delta * eta * epsilon / (r1 * r2 * r4) + delta * zeta * theta / (r1 * r3 * r4)
+
+# Time horizon
+t <- seq(1, horizon, by = step)
+
+# Vectors for time evolution of variables
+S <- numeric(length(t))
+I <- numeric(length(t))
+D <- numeric(length(t))
+A <- numeric(length(t))
+R <- numeric(length(t))
+T <- numeric(length(t))
+H <- numeric(length(t))
+diagnosed_H <- numeric(length(t)) # DIAGNOSED recovered only
+E <- numeric(length(t))
+
+# Vectors for time evolution of actual/perceived Case Fatality Rate
+M <- numeric(length(t))
+P <- numeric(length(t))
+
+# INITIAL CONDITIONS
+
+I[1] <- 200 / population
+D[1] <- 20 / population
+A[1] <- 1 / population
+R[1] <- 2 / population
+T[1] <- 0.00
+H[1] <- 0.00
+E[1] <- 0.00
+S[1] <- 1 - I[1] - D[1] - A[1] - R[1] - T[1] - H[1] - E[1]
+
+diagnosed_H[1] <- 0.00 # DIAGNOSED recovered only
+actual_infected <- numeric(length(t))
+actual_infected[1] <- I[1] + D[1] + A[1] + R[1] + T[1] # Actual currently infected
+
+M[1] <- 0
+P[1] <- 0
+
+# Whole state vector
+x <- c(S[1], I[1], D[1], A[1], R[1], T[1], H[1], E[1], diagnosed_H[1], actual_infected[1])
+```
+
+# simulation 
+
+we've  set up a for loop to run the simulation for a specified time horizon. Within this loop, we've  implemented various intervention strategies at different time points, such as basic social distancing, screening limited to symptomatic subjects, and lockdown with mild and strong effects. we've also updated the reproduction number (R0) after each policy change.
+```{r}
+# SIMULATION
+
+# "Control" binary variables to compute the new R0 every time a policy has
+# changed the parameters
+plotted <- 0
+plotted1 <- 0
+plotted_bis <- 0
+plotted_tris <- 0
+plotted_quat <- 0
+
+for (i in 2:length(t)) {
+  
+  if (i > 4 / step) { # Basic social distancing (awareness, schools closed)
+    alpha <- 0.4218
+    gamma <- 0.285
+    beta <- 0.0057
+    delta <- 0.0057
+    if (plotted == 0) { # Compute the new R0
+      r1 <- epsilon + zeta + lambda
+      r2 <- eta + rho
+      r3 <- theta + mu + kappa
+      r4 <- nu + xi
+      r5 <- sigma + tau
+      R0_primemisure <- alpha / r1 + beta * epsilon / (r1 * r2) + gamma * zeta / (r1 * r3) + delta * eta * epsilon / (r1 * r2 * r4) + delta * zeta * theta / (r1 * r3 * r4)
+      plotted <- 1
+    }
+  }
+  
+  if (i > 12 / step) {
+    # Screening limited to / focused on symptomatic subjects
+    epsilon <- 0.1425
+    if (plotted1 == 0) {
+      r1 <- epsilon + zeta + lambda
+      r2 <- eta + rho
+      r3 <- theta + mu + kappa
+      r4 <- nu + xi
+      r5 <- sigma + tau
+      R0_primemisureeps <- alpha / r1 + beta * epsilon / (r1 * r2) + gamma * zeta / (r1 * r3) + delta * eta * epsilon / (r1 * r2 * r4) + delta * zeta * theta / (r1 * r3 * r4)
+      plotted1 <- 1
+    }
+  }
+  
+  if (i > 22 / step) { # Social distancing: lockdown, mild effect
+      
+    alpha <- 0.36
+    beta <- 0.005
+    gamma <- 0.2
+    delta <- 0.005
+    
+    mu <- 0.008
+    nu <- 0.015
+    
+    zeta <- 0.034
+    eta <- 0.034
+    
+    lambda <- 0.08
+    rho <- 0.0171
+    kappa <- 0.0171
+    xi <- 0.0171
+    sigma <- 0.0171
+    
+    if (plotted_bis == 0) { # Compute the new R0
+      r1 <- epsilon + zeta + lambda
+      r2 <- eta + rho
+      r3 <- theta + mu + kappa
+      r4 <- nu + xi
+      r5 <- sigma + tau
+      R0_secondemisure <- (alpha * r2 * r3 * r4 + epsilon * beta * r3 * r4 + gamma * zeta * r2 * r4 + delta * eta * epsilon * r3 + delta * zeta * theta * r2) / (r1 * r2 * r3 * r4)
+      plotted_bis <- 1
+    }
+  }
+  
+  if (i > 28 / step) { # Social distancing: lockdown, strong effect
+
+    alpha <- 0.21
+    gamma <- 0.11
+
+    if (plotted_tris == 0) { # Compute the new R0
+      r1 <- epsilon + zeta + lambda
+      r2 <- eta + rho
+      r3 <- theta + mu + kappa
+      r4 <- nu + xi
+      r5 <- sigma + tau
+      R0_terzemisure <- (alpha * r2 * r3 * r4 + epsilon * beta * r3 * r4 + gamma * zeta * r2 * r4 + delta * eta * epsilon * r3 + delta * zeta * theta * r2) / (r1 * r2 * r3 * r4)
+      plotted_tris <- 1
+    }
+  }
+
+  if (i > 38 / step) { # Broader diagnosis campaign
+
+    epsilon <- 0.2
+    rho <- 0.02
+    kappa <- 0.02
+    xi <- 0.02
+    sigma <- 0.01
+
+    zeta <- 0.025
+    eta <- 0.025
+
+    if (plotted_quat == 0) { # Compute the new R0
+      r1 <- epsilon + zeta + lambda
+      r2 <- eta + rho
+      r3 <- theta + mu + kappa
+      r4 <- nu + xi
+      r5 <- sigma + tau
+      R0_quartemisure <- (alpha * r2 * r3 * r4 + epsilon * beta * r3 * r4 + gamma * zeta * r2 * r4 + delta * eta * epsilon * r3 + delta * zeta * theta * r2) / (r1 * r2 * r3 * r4)
+      plotted_quat <- 1
+    }
+  }
+
+  # Compute the system evolution
+
+B <- matrix(c(-alpha * x[2] - beta * x[3] - gamma * x[4] - delta * x[5], 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                alpha * x[2] + beta * x[3] + gamma * x[4] + delta * x[5], -(epsilon + zeta + lambda), 0, 0, 0, 0, 0, 0, 0, 0,
+                0, epsilon, -(eta + rho), 0, 0, 0, 0, 0, 0, 0,
+                0, zeta, 0, -(theta + mu + kappa), 0, 0, 0, 0, 0, 0,
+                0, 0, eta, theta, -(nu + xi), 0, 0, 0, 0, 0,
+                0, 0, 0, mu, nu, -(sigma + tau), 0, 0, 0, 0,
+                0, lambda, rho, kappa, xi, sigma, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, tau, 0, 0, 0, 0,
+                0, 0, rho, 0, xi, sigma, 0, 0, 0, 0,
+                alpha * x[2] + beta * x[3] + gamma * x[4] + delta * x[5], 0, 0, 0, 0, 0, 0, 0, 0, 0),
+                nrow = 10, ncol = 10, byrow = TRUE)
+
+
+  x <- x + B %*% x * step
+
+  # Update variables
+
+  S[i] <- x[1]
+  I[i] <- x[2]
+  D[i] <- x[3]
+  A[i] <- x[4]
+  R[i] <- x[5]
+  T[i] <- x[6]
+  H[i] <- x[7]
+  E[i] <- x[8]
+
+  diagnosed_H[i] <- x[9]
+  actual_infected[i] <- x[10]
+
+  # Update Case Fatality Rate
+
+  M[i] <- E[i] / (S[1] - S[i])
+  P[i] <- E[i] / ((epsilon * r3 + (theta + mu) * zeta) * (I[1] + S[1] - I[i] - S[i]) / (r1 * r3) + (theta + mu) * (A[1] - A[i]) / r3)
+
+}
+
+# Final Values
+
+# Variables
+Sbar <- S[length(t)]
+Ibar <- I[length(t)]
+Dbar <- D[length(t)]
+Abar <- A[length(t)]
+Rbar <- R[length(t)]
+Tbar <- T[length(t)]
+Hbar <- H[length(t)]
+Ebar <- E[length(t)]
+
+# Case fatality rate
+Mbar <- M[length(t)]
+Pbar <- P[length(t)]
+
+# Case fatality rate from formulas
+Mbar1 <- Ebar / (S[1] - Sbar)
+Pbar1 <- Ebar / ((epsilon * r3 + (theta + mu) * zeta) * (I[1] + S[1] - Sbar - Ibar) / (r1 * r3) + (theta + mu) * (A[1] - Abar) / r3)
+
+```
+
+
+# Figures
+
+plot: Long-term evolution: actual vs diagnosed cases of infection
+```{r}
+library(ggplot2)
+library(gridExtra)
+
+# Long-term evolution: actual vs diagnosed cases of infection
+plot1 <- ggplot(data.frame(t = t, actual_infected = actual_infected, I = I, D = D, A = A, R = R, T = T, H = H, E = E, diagnosed_H = diagnosed_H), aes(t)) +
+  geom_line(aes(y = actual_infected, color = "Cumulative Infected")) +
+  geom_line(aes(y = I + D + A + R + T, color = "Current Total Infected")) +
+  geom_line(aes(y = H, color = "Recovered")) +
+  geom_line(aes(y = E, color = "Deaths")) +
+  geom_line(aes(y = D + R + T + E + diagnosed_H, linetype = "Diagnosed Cumulative Infected", color = "Diagnosed Cumulative Infected")) +
+  geom_line(aes(y = D + R + T, linetype = "Diagnosed Current Total Infected", color = "Diagnosed Current Total Infected")) +
+  geom_line(aes(y = diagnosed_H, linetype = "Diagnosed Recovered", color = "Diagnosed Recovered")) +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "Long-term evolution: actual vs diagnosed cases of infection") +
+  scale_color_manual(values = c("Cumulative Infected" = "blue", "Current Total Infected" = "red", "Recovered" = "green", "Deaths" = "black", "Diagnosed Cumulative Infected" = "blue", "Diagnosed Current Total Infected" = "red", "Diagnosed Recovered" = "green")) +
+  scale_linetype_manual(values = c("Diagnosed Cumulative Infected" = "dashed", "Diagnosed Current Total Infected" = "dashed", "Diagnosed Recovered" = "dashed")) +
+  theme_minimal() +
+  theme(legend.position = "northwest")
+print(plot1)
+
+```
+
+```{r}
+
+```
+
