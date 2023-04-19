@@ -340,8 +340,19 @@ plot1 <- ggplot(data.frame(t = t, actual_infected = actual_infected, I = I, D = 
 print(plot1)
 
 ```
+Long-term evolution of infected subpopulations
 
 ```{r}
-
+plot2 <- ggplot(data.frame(t = t, I = I, D = D, A = A, R = R, T = T), aes(t)) +
+  geom_line(aes(y = I, color = "Infected ND AS")) +
+  geom_line(aes(y = D, color = "Infected D AS")) +
+  geom_line(aes(y = A, color = "Infected ND S")) +
+  geom_line(aes(y = R, color = "Infected D S")) +
+  geom_line(aes(y = T, color = "Infected D IC")) +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)") +
+  scale_color_manual(values = c("Infected ND AS" = "blue", "Infected D AS" = "cyan", "Infected ND S" = "green", "Infected D S" = "magenta", "Infected D IC" = "red")) +
+  theme_minimal() +
+  theme(legend.position = "northeast")
+print(plot2)
 ```
 
