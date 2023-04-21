@@ -4,13 +4,14 @@ author: "group 1"
 date: "2023-04-19"
 output: html_document
 ---
-# data
-Data is on the Italian population, total cases, deaths, recovered, and currently positive cases. Also have data on number of people in home isolation, hospitalized, and ICU.
+# FIGURE 2
 
+## SETUP
 ```{r}
-#######################################
-# DATA
-#######################################
+library(ggplot2)
+library(gridExtra)
+
+### DATA ###
 
 # Italian population
 population <- 60e6
@@ -32,13 +33,9 @@ HomeIsolation <- c(49, 91, 162, 221, 284, 412, 543, 798, 927, 1000, 1065, 1155, 
 Hospitalised <- c(54, 99, 114, 128, 248, 345, 401, 639, 742, 1034, 1346, 1790, 2394, 2651, 3557, 4316, 5038, 5838, 6650, 7426, 8372, 9663, 11025, 12894, 14363, 15757, 16020, 17708, 19846, 20692, 21937, 23112, 24753, 26029, 26676, 27386, 27795, 28192, 28403, 28540, 28741, 29010, 28949) / population # R
 # Currently positive: ICU
 ICU <- c(26, 23, 35, 36, 56, 64, 105, 140, 166, 229, 295, 351, 462, 567, 650, 733, 877, 1028, 1153, 1328, 1518, 1672, 1851, 2060, 2257, 2498, 2655, 2857, 3009, 3204, 3396, 3489, 3612, 3732, 3856, 3906, 3981, 4023, 4035, 4053, 4068, 3994, 3977) / population # T
-```
 
-# parameters
+### PARAMETERS ###
 
-defined various parameters for the simulation, such as transmission rates, detection rates, worsening rates, mortality rate, and recovery rates. we've also calculated the initial reproduction number (R0).
-
-```{r}
 # Simulation horizon: CAN BE MODIFIED AT ONE'S WILL PROVIDED THAT IT IS AT
 # LEAST EQUAL TO THE NUMBER OF DAYS FOR WHICH DATA ARE AVAILABLE
 horizon <- 350
@@ -89,7 +86,7 @@ xi <- 0.0171
 # Recovery rate for life-threatened symptomatic infected
 sigma <- 0.0171
 
-# DEFINITIONS
+### DEFINITIONS ###
 
 # Parameters
 r1 <- epsilon + zeta + lambda
@@ -139,13 +136,8 @@ P[1] <- 0
 
 # Whole state vector
 x <- c(S[1], I[1], D[1], A[1], R[1], T[1], H[1], E[1], diagnosed_H[1], actual_infected[1])
-```
 
-# simulation 
-
-we've  set up a for loop to run the simulation for a specified time horizon. Within this loop, we've  implemented various intervention strategies at different time points, such as basic social distancing, screening limited to symptomatic subjects, and lockdown with mild and strong effects. we've also updated the reproduction number (R0) after each policy change.
-```{r}
-# SIMULATION
+### SIMULATION ###
 
 # "Control" binary variables to compute the new R0 every time a policy has
 # changed the parameters
@@ -293,8 +285,463 @@ B <- matrix(c(-alpha * x[2] - beta * x[3] - gamma * x[4] - delta * x[5], 0, 0, 0
 
 }
 
-# Final Values
+### Final Values ###
 
+# Variables
+Sbar <- S[length(t)]
+Ibar <- I[length(t)]
+Dbar <- D[length(t)]
+Abar <- A[length(t)]
+Rbar <- R[length(t)]
+Tbar <- T[length(t)]
+Hbar <- H[length(t)]
+Ebar <- E[length(t)]
+
+# Case fatality rate
+Mbar <- M[length(t)]
+Pbar <- P[length(t)]
+
+# Case fatality rate from formulas
+Mbar1 <- Ebar / (S[1] - Sbar)
+Pbar1 <- Ebar / ((epsilon * r3 + (theta + mu) * zeta) * (I[1] + S[1] - Sbar - Ibar) / (r1 * r3) + (theta + mu) * (A[1] - Abar) / r3)
+```
+
+## 2a: Short-term evolution: actual vs diagnosed cases of infection
+```{r}
+plot1 <- ggplot(data.frame(t = t, actual_infected = actual_infected, I = I, D = D, A = A, R = R, T = T, H = H, E = E, diagnosed_H = diagnosed_H), aes(t)) +
+  geom_line(aes(y = actual_infected), color = "blue", linetype = "solid") +
+  geom_line(aes(y = I + D + A + R + T), color = "red", linetype = "solid") +
+  geom_line(aes(y = H), color = "green", linetype = "solid") +
+  geom_line(aes(y = E), color = "black", linetype = "solid") +
+  geom_line(aes(y = D + R + T + E + diagnosed_H), color = "blue", linetype = "dotted") +
+  geom_line(aes(y = D + R + T), color = "red", linetype = "dotted") +
+  geom_line(aes(y = diagnosed_H), color = "green", linetype = "dotted") +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "Fig. 2a: Short-term evolution: actual vs diagnosed cases of infection") +
+  scale_x_continuous(limits = c(0, 46), breaks = seq(5,45, by = 5)) +
+  scale_y_continuous(limits = c(0, 0.015)) +
+  theme_minimal()
+
+# Custom legend
+legend_data <- data.frame(
+  x = min(t),
+  y = seq(0.014, 0.008, length.out = 7),
+  color = c("blue", "red", "green", "black", "blue", "red", "green"),
+  linetype = c("solid", "solid", "solid", "solid", "dotted", "dotted", "dotted"),
+  label = c("Cumulative Infected", "Current Total Infected", "Recovered", "Deaths", "Diagnosed Cumulative Infected", "Diagnosed Current Total Infected", "Diagnosed Recovered")
+)
+
+plot1 <- plot1 +
+  geom_segment(data = legend_data, aes(x = x, xend = x + 5, y = y, yend = y, color = color, linetype = linetype), size = 1) +
+  geom_text(data = legend_data, aes(x = x + 7, y = y, label = label), hjust = 0) +
+  scale_color_identity(guide = "none") +
+  scale_linetype_identity(guide = "none") +
+  theme(legend.position = "none")
+
+print(plot1)
+
+ggsave("fig2a.pdf", plot = plot1, width = 8, height = 6, units = "in")
+```
+
+
+## 2b: Short-term evolution of infected subpopulations
+
+```{r}
+plot2 <- ggplot(data.frame(t = t, I = I, D = D, A = A, R = R, T = T), aes(t)) +
+  geom_line(aes(y = I), color = "blue") +
+  geom_line(aes(y = D), color = "cyan") +
+  geom_line(aes(y = A), color = "green") +
+  geom_line(aes(y = R), color = "magenta") +
+  geom_line(aes(y = T), color = "red") +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "Fig. 2b: Short-term evolution of infected subpopulations") +
+  scale_y_continuous(limits = c(0, 1.1e-3)) +
+    scale_x_continuous(limits = c(0, 46), breaks = seq(5,45, by = 5)) +
+  theme_minimal()
+
+# Custom legend
+legend_data <- data.frame(
+  x = min(t),
+  y = seq(0.0009, 0.0006, length.out = 5),
+  color = c("blue", "cyan", "green", "magenta", "red"),
+  label = c("Infected ND AS", "Infected D AS", "Infected ND S", "Infected D S", "Infected D IC")
+)
+
+plot2 <- plot2 +
+  geom_segment(data = legend_data, aes(x = x, xend = x + 5, y = y, yend = y, color = color), size = 1) +
+  geom_text(data = legend_data, aes(x = x + 7, y = y, label = label), hjust = 0) +
+  scale_color_identity(guide = "none") +
+  theme(legend.position = "none")
+
+print(plot2)
+
+ggsave("fig2b.pdf", plot = plot2, width = 8, height = 6, units = "in")
+```
+
+## 2c: Long-term evolution: actual vs diagnosed cases of infection
+```{r}
+plot3 <- ggplot(data.frame(t = t, actual_infected = actual_infected, I = I, D = D, A = A, R = R, T = T, H = H, E = E, diagnosed_H = diagnosed_H), aes(t)) +
+  geom_line(aes(y = actual_infected), color = "blue", linetype = "solid") +
+  geom_line(aes(y = I + D + A + R + T), color = "red", linetype = "solid") +
+  geom_line(aes(y = H), color = "green", linetype = "solid") +
+  geom_line(aes(y = E), color = "black", linetype = "solid") +
+  geom_line(aes(y = D + R + T + E + diagnosed_H), color = "blue", linetype = "dotted") +
+  geom_line(aes(y = D + R + T), color = "red", linetype = "dotted") +
+  geom_line(aes(y = diagnosed_H), color = "green", linetype = "dotted") +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "Fig. 2c: Long-term evolution: actual vs diagnosed cases of infection") +
+    scale_x_continuous(limits = c(min(t), max(t)), breaks = seq(50,350, by = 50)) +
+  scale_y_continuous(limits = c(0, 0.015)) +
+  theme_minimal()
+
+# Custom legend
+legend_data <- data.frame(
+  x = min(t),
+  y = seq(0.014, 0.008, length.out = 7),
+  color = c("blue", "red", "green", "black", "blue", "red", "green"),
+  linetype = c("solid", "solid", "solid", "solid", "dotted", "dotted", "dotted"),
+  label = c("Cumulative Infected", "Current Total Infected", "Recovered", "Deaths", "Diagnosed Cumulative Infected", "Diagnosed Current Total Infected", "Diagnosed Recovered")
+)
+
+plot3 <- plot3 +
+  geom_segment(data = legend_data, aes(x = x, xend = x + 5, y = y, yend = y, color = color, linetype = linetype), size = 1) +
+  geom_text(data = legend_data, aes(x = x + 7, y = y, label = label), hjust = 0) +
+  scale_color_identity(guide = "none") +
+  scale_linetype_identity(guide = "none") +
+  theme(legend.position = "none")
+
+print(plot3)
+
+ggsave("fig2c.pdf", plot = plot3, width = 8, height = 6, units = "in")
+
+
+```
+## 2d: Long-term evolution of infected subpopulations
+
+```{r}
+plot4 <- ggplot(data.frame(t = t, I = I, D = D, A = A, R = R, T = T), aes(t)) +
+  geom_line(aes(y = I), color = "blue") +
+  geom_line(aes(y = D), color = "cyan") +
+  geom_line(aes(y = A), color = "green") +
+  geom_line(aes(y = R), color = "magenta") +
+  geom_line(aes(y = T), color = "red") +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "Fig. 2d: Long-term evolution of infected subpopulations") +
+      scale_x_continuous(limits = c(min(t), max(t)), breaks = seq(50,350, by = 50)) +
+  scale_y_continuous(limits = c(0, 1.1e-3)) +
+  theme_minimal()
+
+# Custom legend
+legend_data <- data.frame(
+  x = max(t) - 50,
+  y = seq(0.0009, 0.0006, length.out = 5),
+  color = c("blue", "cyan", "green", "magenta", "red"),
+  label = c("Infected ND AS", "Infected D AS", "Infected ND S", "Infected D S", "Infected D IC")
+)
+
+plot4 <- plot4 +
+  geom_segment(data = legend_data, aes(x = x, xend = x + 5, y = y, yend = y, color = color), size = 1) +
+  geom_text(data = legend_data, aes(x = x + 7, y = y, label = label), hjust = 0) +
+  scale_color_identity(guide = "none") +
+  theme(legend.position = "none")
+
+print(plot4)
+
+ggsave("fig2d.pdf", plot = plot4, width = 8, height = 6, units = "in")
+```
+
+
+#FIGURE 3A,B
+
+## SETUP
+```{r}
+# DATA
+# Italian population
+population <- 60e6
+
+# PARAMETERS
+# Simulation horizon: CAN BE MODIFIED AT ONE'S WILL
+horizon <- 350
+
+# Plot yes/no: SET TO 1 IF PDF FIGURES MUST BE GENERATED, 0 OTHERWISE
+plot_PDF <- 0
+
+# Time-step for Euler discretisation of the continuous-time system
+step <- 0.01
+
+# Transmission rate due to contacts with UNDETECTED asymptomatic infected
+alpha <- 0.57
+# Transmission rate due to contacts with DETECTED asymptomatic infected
+beta <- 0.0114
+# Transmission rate due to contacts with UNDETECTED symptomatic infected
+gamma <- 0.456
+# Transmission rate due to contacts with DETECTED symptomatic infected
+delta <- 0.0114
+
+# Detection rate for ASYMPTOMATIC
+epsilon <- 0.171
+# Detection rate for SYMPTOMATIC
+theta <- 0.3705
+
+# Worsening rate: UNDETECTED asymptomatic infected becomes symptomatic
+zeta <- 0.1254
+# Worsening rate: DETECTED asymptomatic infected becomes symptomatic
+eta <- 0.1254
+
+# Worsening rate: UNDETECTED symptomatic infected develop life-threatening
+# symptoms
+mu <- 0.0171
+# Worsening rate: DETECTED symptomatic infected develop life-threatening
+# symptoms
+nu <- 0.0274
+
+# Mortality rate for infected with life-threatening symptoms
+tau <- 0.01
+
+# Recovery rate for undetected asymptomatic infected
+lambda <- 0.0342
+# Recovery rate for detected asymptomatic infected
+rho <- 0.0342
+# Recovery rate for undetected symptomatic infected
+kappa <- 0.0171
+# Recovery rate for detected symptomatic infected
+xi <- 0.0171
+# Recovery rate for life-threatened symptomatic infected
+sigma <- 0.0171
+
+# Rate of loss of immunity
+ki <- 0
+
+# DEFINITIONS
+# Parameters
+r1 <- epsilon + zeta + lambda
+r2 <- eta + rho
+r3 <- theta + mu + kappa
+r4 <- nu + xi
+r5 <- sigma + tau
+
+# Initial R0
+initial_R0 <- alpha / r1 + beta * epsilon / (r1 * r2) + gamma * zeta / (r1 * r3) + delta * eta * epsilon / (r1 * r2 * r4) + delta * zeta * theta / (r1 * r3 * r4)
+
+# Time horizon
+time <- seq(1, horizon, by = step)
+
+# Vectors for time evolution of variables
+S <- numeric(length(time))
+I <- numeric(length(time))
+D <- numeric(length(time))
+A <- numeric(length(time))
+R <- numeric(length(time))
+T <- numeric(length(time))
+H <- numeric(length(time))
+diagnosed_H <- numeric(length(time))
+E <- numeric(length(time))
+
+# Vectors for time evolution of actual/perceived Case Fatality Rate
+M <- numeric(length(time))
+P <- numeric(length(time))
+
+# INITIAL CONDITIONS
+I[1] <- 200 / population
+D[1] <- 20 / population
+A[1] <- 1 / population
+R[1] <- 2 / population
+T[1] <- 0
+H[1] <- 0
+E[1] <- 0
+S[1] <- 1 - I[1] - D[1] - A[1] - R[1] - T[1] - H[1] - E[1]
+
+diagnosed_H[1] <- 0  # DIAGNOSED recovered only
+actual_infected[1] <- I[1] + D[1] + A[1] + R[1] + T[1]  # Actual currently infected
+
+M[1] <- 0
+P[1] <- 0
+
+# Whole state vector
+x <- c(S[1], I[1], D[1], A[1], R[1], T[1], H[1], E[1], diagnosed_H[1], actual_infected[1])
+
+# SIMULATION
+#######################################
+
+# "Control" binary variables to compute the new R0 every time a policy has
+# changed the parameters
+plotted <- 0
+plotted1 <- 0
+plotted_bis <- 0
+plotted_tris <- 0
+plotted_quat <- 0
+plotted_fin <- 0
+
+for (i in 2:length(t)) {
+    
+    if (i > 4/step) { # Basic social distancing (awareness, schools closed)
+        alpha <- 0.4218
+        gamma <- 0.285
+        beta <- 0.0057
+        delta <- 0.0057
+        if (plotted == 0) { # Compute the new R0
+            r1 <- epsilon + zeta + lambda
+            r2 <- eta + rho
+            r3 <- theta + mu + kappa
+            r4 <- nu + xi
+            r5 <- sigma + tau
+            R0_primemisure <- alpha/r1 + beta*epsilon/(r1*r2) + gamma*zeta/(r1*r3) + delta*eta*epsilon/(r1*r2*r4) + delta*zeta*theta/(r1*r3*r4)
+            plotted <- 1
+        }
+    }
+    
+    if (i > 12/step) {
+        # Screening limited to / focused on symptomatic subjects
+        epsilon <- 0.1425
+        if (plotted1 == 0) {
+            r1 <- epsilon + zeta + lambda
+            r2 <- eta + rho
+            r3 <- theta + mu + kappa
+            r4 <- nu + xi
+            r5 <- sigma + tau
+            R0_primemisureeps <- alpha/r1 + beta*epsilon/(r1*r2) + gamma*zeta/(r1*r3) + delta*eta*epsilon/(r1*r2*r4) + delta*zeta*theta/(r1*r3*r4)
+            plotted1 <- 1
+        }
+    }
+    
+    if (i > 22/step) { # Social distancing: lockdown, mild effect
+        
+        alpha <- 0.36
+        beta <- 0.005
+        gamma <- 0.2
+        delta <- 0.005
+        
+        mu <- 0.008
+        nu <- 0.015
+        
+        zeta <- 0.034
+        eta <- 0.034
+        
+        lambda <- 0.08
+        rho <- 0.0171
+        kappa <- 0.0171
+        xi <- 0.0171
+        sigma <- 0.0171
+        
+        if (plotted_bis == 0) { # Compute the new R0
+            r1 <- epsilon + zeta + lambda
+            r2 <- eta + rho
+            r3 <- theta + mu + kappa
+            r4 <- nu + xi
+            r5 <- sigma + tau
+            R0_secondemisure <- (alpha*r2*r3*r4 + epsilon*beta*r3*r4 + gamma*zeta*r2*r4 + delta*eta*epsilon*r3 + delta*zeta*theta*r2) / (r1*r2*r3*r4)
+            plotted_bis <- 1
+        }
+    }
+
+if (i > 28/step) { # Social distancing: lockdown, strong effect
+
+    alpha <- 0.21
+    gamma <- 0.11
+
+    if (plotted_tris == 0) { # Compute the new R0
+        r1 <- epsilon + zeta + lambda
+        r2 <- eta + rho
+        r3 <- theta + mu + kappa
+        r4 <- nu + xi
+        r5 <- sigma + tau
+        R0_terzemisure <- (alpha * r2 * r3 * r4 + epsilon * beta * r3 * r4 + gamma * zeta * r2 * r4 + delta * eta * epsilon * r3 + delta * zeta * theta * r2) / (r1 * r2 * r3 * r4)
+        plotted_tris <- 1
+    }
+}
+
+if (i > 38/step) { # Broader diagnosis campaign
+
+    epsilon <- 0.2
+    rho <- 0.02
+    kappa <- 0.02
+    xi <- 0.02
+    sigma <- 0.01
+
+    zeta <- 0.025
+    eta <- 0.025
+
+    if (plotted_quat == 0) { # Compute the new R0
+        r1 <- epsilon + zeta + lambda
+        r2 <- eta + rho
+        r3 <- theta + mu + kappa
+        r4 <- nu + xi
+        r5 <- sigma + tau
+        R0_quartemisure <- (alpha * r2 * r3 * r4 + epsilon * beta * r3 * r4 + gamma * zeta * r2 * r4 + delta * eta * epsilon * r3 + delta * zeta * theta * r2) / (r1 * r2 * r3 * r4)
+        plotted_quat <- 1
+    }
+}
+
+# OUTLOOK: to EXPLORE POSSIBLE SCENARIOS,
+# change the parameters (after 50 days)
+if (i > 50/step) {
+
+    alpha <- 0.2100 * 1.2
+    beta <- 0.0050 * 1
+    gamma <- 0.1100 * 1
+    delta <- 0.0050 * 1
+
+    epsilon <- 0.2000 * 1
+    theta <- 0.3705 * 1
+
+    zeta <- 0.0250 * 1
+    eta <- 0.0250 * 1
+
+    mu <- 0.008 * 1
+    nu <- 0.0150 * 1
+
+    tau <- 0.0100 * 1
+
+    lambda <- 0.0800 * 1
+    rho <- 0.0200 * 1
+    kappa <- 0.0200 * 1
+    xi <- 0.0200 * 1
+    sigma <- 0.0100 * 1
+
+    ki <- 0
+
+    if (plotted_fin == 0) { # Compute the new R0
+        r1 <- epsilon + zeta + lambda
+        r2 <- eta + rho
+        r3 <- theta + mu + kappa
+        r4 <- nu + xi
+        r5 <- sigma + tau
+R0_final <- (alpha * r2 * r3 * r4 + epsilon * beta * r3 * r4 + gamma * zeta * r2 * r4 + delta * eta * epsilon * r3 + delta * zeta * theta * r2) / (r1 * r2 * r3 * r4)
+        plotted_fin <- 1
+    }
+}
+
+# Compute the system evolution
+B <- matrix(c(
+    -alpha * x[2] - beta * x[3] - gamma * x[4] - delta * x[5], 0, 0, 0, 0, 0, ki, 0, 0, 0,
+    alpha * x[2] + beta * x[3] + gamma * x[4] + delta * x[5], -(epsilon + zeta + lambda), 0, 0, 0, 0, 0, 0, 0, 0,
+    0, epsilon, -(eta + rho), 0, 0, 0, 0, 0, 0, 0,
+    0, zeta, 0, -(theta + mu + kappa), 0, 0, 0, 0, 0, 0,
+    0, 0, eta, theta, -(nu + xi), 0, 0, 0, 0, 0,
+    0, 0, 0, mu, nu, -(sigma + tau), 0, 0, 0, 0,
+    0, lambda, rho, kappa, xi, sigma, -ki, 0, 0, 0,
+    0, 0, 0, 0, 0, tau, 0, 0, 0, 0,
+    0, 0, rho, 0, xi, sigma, 0, 0, 0, 0,
+    alpha * x[2] + beta * x[3] + gamma * x[4] + delta * x[5], 0, 0, 0, 0, 0, 0, 0, 0, 0
+), nrow = 10, byrow = TRUE)
+
+x <- x + B %*% x * step
+
+# Update variables
+S[i] <- x[1]
+I[i] <- x[2]
+D[i] <- x[3]
+A[i] <- x[4]
+R[i] <- x[5]
+T[i] <- x[6]
+H[i] <- x[7]
+E[i] <- x[8]
+
+diagnosed_H[i] <- x[9]
+actual_infected[i] <- x[10]
+
+# Update Case Fatality Rate
+M[i] <- E[i] / (S[1] - S[i])
+P[i] <- E[i] / ((epsilon * r3 + (theta + mu) * zeta) * (I[1] + S[1] - I[i] - S[i]) / (r1 * r3) + (theta + mu) * (A[1] - A[i]) / r3)
+}
+
+# FINAL VALUES
 # Variables
 Sbar <- S[length(t)]
 Ibar <- I[length(t)]
@@ -316,43 +763,1320 @@ Pbar1 <- Ebar / ((epsilon * r3 + (theta + mu) * zeta) * (I[1] + S[1] - Sbar - Ib
 ```
 
 
-# Figures
+## fig3a: Predicted epidemic evolution: actual vs diagnosed cases of infection (weakened lockdown)
+```{r}
+# Create a data frame with the necessary variables
+df <- data.frame(t = t, actual_infected = actual_infected, I = I, D = D, A = A, R = R, T = T, H = H, E = E, diagnosed_H = diagnosed_H)
 
-plot: Long-term evolution: actual vs diagnosed cases of infection
+# Create the plot
+plot5 <- ggplot(df, aes(x = t)) +
+  geom_line(aes(y = actual_infected), color = "blue") +
+  geom_line(aes(y = I + D + A + R + T), color = "red") +
+  geom_line(aes(y = H), color = "green") +
+  geom_line(aes(y = E), color = "black") +
+  geom_line(aes(y = D + R + T + E + diagnosed_H), color = "blue", linetype = "dotted") +
+  geom_line(aes(y = D + R + T), color = "red", linetype = "dotted") +
+  geom_line(aes(y = diagnosed_H), color = "green", linetype = "dotted") +
+  labs(title = "Fig 3a: Predicted epidemic evolution: actual vs diagnosed cases of infection (weakened lockdown)", x = "Time (days)", y = "Cases (fraction of the population)") +
+  scale_x_continuous(limits = c(min(t), max(t)), breaks = c(50, 100, 150, 200, 250, 300, 350)) +
+  scale_y_continuous(limits = c(0, 0.015)) +
+  theme_minimal() +
+  theme(legend.position = "east")
+
+# Create custom legend
+legend_data <- data.frame(
+  x = min(t),
+  y = seq(0.014, 0.008, length.out = 7),
+  color = c("blue", "red", "green", "black", "blue", "red", "green"),
+  linetype = c("solid", "solid", "solid", "solid", "dotted", "dotted", "dotted"),
+  label = c("Cumulative Infected", "Current Total Infected", "Recovered", "Deaths", "Diagnosed Cumulative Infected", "Diagnosed Current Total Infected", "Diagnosed Recovered")
+)
+
+plot5 <- plot5 +
+  geom_segment(data = legend_data, aes(x = x, xend = x + 5, y = y, yend = y, color = color, linetype = linetype), size = 1) +
+  geom_text(data = legend_data, aes(x = x + 7, y = y, label = label), hjust = 0) +
+  scale_color_identity(guide = "none") +
+  scale_linetype_identity(guide = "none")
+
+# Print the plot
+print(plot5)
+
+# Save the plot to a PDF file
+ggsave("fig3a.pdf", plot = plot5, width = 24, height = 16, units = "cm")
+
+```
+
+
+## Fig. 3b: Predicted evolution of infected subpopulations (weakened lockdown)
+```{r}
+# Create a data frame with the necessary variables
+df <- data.frame(t = t, I = I, D = D, A = A, R = R, T = T)
+
+# Create the plot
+plot6 <- ggplot(df, aes(x = t)) +
+  geom_line(aes(y = I), color = "blue") +
+  geom_line(aes(y = D), color = "cyan") +
+  geom_line(aes(y = A), color = "green") +
+  geom_line(aes(y = R), color = "magenta") +
+  geom_line(aes(y = T), color = "red") +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "Fig. 3b: Predicted evolution of infected subpopulations (weakened lockdown)") +
+  scale_y_continuous(limits = c(0, 1.1e-3)) +
+  scale_x_continuous(limits = c(min(t), max(t)), breaks = seq(50, 350, by = 50)) +
+  theme_minimal()
+
+# Custom legend
+legend_data <- data.frame(
+  x = max(t) - 100,
+  y = seq(0.001, 0.0006, length.out = 5),
+  color = c("blue", "cyan", "green", "magenta", "red"),
+  label = c("Infected ND AS", "Infected D AS", "Infected ND S", "Infected D S", "Infected D IC")
+)
+
+plot6 <- plot6 +
+  geom_segment(data = legend_data, aes(x = x, xend = x + 5, y = y, yend = y, color = color), size = 1) +
+  geom_text(data = legend_data, aes(x = x + 7, y = y, label = label), hjust = 0) +
+  scale_color_identity(guide = "none") +
+  theme(legend.position = "none")
+
+# Print the plot
+print(plot6)
+
+# Save the plot as a PDF
+ggsave("fig3b.pdf", plot = plot6, width = 9.44, height = 6.29, units = "in")
+```
+
+#FIGURE 3C,D
+
+## SETUP
+```{r}
+# DATA
+################################################
+
+# Italian population
+population <- 60e6
+
+################################################
+# PARAMETERS
+################################################
+
+# Simulation horizon: CAN BE MODIFIED AT ONE'S WILL
+horizon <- 350
+
+# Time-step for Euler discretization of the continuous-time system
+step <- 0.01
+
+# Transmission rate due to contacts with UNDETECTED asymptomatic infected
+alpha <- 0.57
+# Transmission rate due to contacts with DETECTED asymptomatic infected
+beta <- 0.0114
+# Transmission rate due to contacts with UNDETECTED symptomatic infected
+gamma <- 0.456
+# Transmission rate due to contacts with DETECTED symptomatic infected
+delta <- 0.0114
+
+# Detection rate for ASYMPTOMATIC
+epsilon <- 0.171
+# Detection rate for SYMPTOMATIC
+theta <- 0.3705
+
+# Worsening rate: UNDETECTED asymptomatic infected becomes symptomatic
+zeta <- 0.1254
+# Worsening rate: DETECTED asymptomatic infected becomes symptomatic
+eta <- 0.1254
+
+# Worsening rate: UNDETECTED symptomatic infected develop life-threatening symptoms
+mu <- 0.0171
+# Worsening rate: DETECTED symptomatic infected develop life-threatening symptoms
+nu <- 0.0274
+
+# Mortality rate for infected with life-threatening symptoms
+tau <- 0.01
+
+# Recovery rate for undetected asymptomatic infected
+lambda <- 0.0342
+# Recovery rate for detected asymptomatic infected
+rho <- 0.0342
+# Recovery rate for undetected symptomatic infected
+kappa <- 0.0171
+# Recovery rate for detected symptomatic infected
+xi <- 0.0171
+# Recovery rate for life-threatened symptomatic infected
+sigma <- 0.0171
+
+# Rate of loss of immunity
+ki <- 0
+
+# DEFINITIONS
+################################################
+
+# Parameters
+r1 <- epsilon + zeta + lambda
+r2 <- eta + rho
+r3 <- theta + mu + kappa
+r4 <- nu + xi
+r5 <- sigma + tau
+
+# Initial R0
+initial_R0 <- alpha / r1 + beta * epsilon / (r1 * r2) + gamma * zeta / (r1 * r3) + delta * eta * epsilon / (r1 * r2 * r4) + delta * zeta * theta / (r1 * r3 * r4)
+
+# Time horizon
+t <- seq(1, horizon, by = step)
+
+# Vectors for time evolution of variables
+S <- numeric(length(t))
+I <- numeric(length(t))
+D <- numeric(length(t))
+A <- numeric(length(t))
+R <- numeric(length(t))
+T <- numeric(length(t))
+H <- numeric(length(t))
+diagnosed_H <- numeric(length(t)) # DIAGNOSED recovered only!
+E <- numeric(length(t))
+
+# Vectors for time evolution of actual/perceived Case Fatality Rate
+M <- numeric(length(t))
+P <- numeric(length(t))
+
+################################################
+# INITIAL CONDITIONS
+################################################
+
+I[1] <- 200 / population
+D[1] <- 20 / population
+A[1] <- 1 / population
+R[1] <- 2 / population
+T[1] <- 0.00
+H[1] <- 0.00
+E[1] <- 0.00
+S[1] <- 1 - I[1] - D[1] - A[1] - R[1] - T[1] - H[1] - E[1]
+
+diagnosed_H[1] <- 0.00 # DIAGNOSED recovered only
+actual_infected[1] <- I[1] + D[1] + A[1] + R[1] + T[1] # Actual currently infected
+
+M[1] <- 0
+P[1] <- 0
+
+# Whole state vector
+x <- c(S[1], I[1], D[1], A[1], R[1], T[1], H[1], E[1], diagnosed_H[1], actual_infected[1])
+
+# SIMULATION
+################################################
+
+# "Control" binary variables to compute the new R0 every time a policy has
+# changed the parameters
+plotted <- 0
+plotted1 <- 0
+plotted_bis <- 0
+plotted_tris <- 0
+plotted_quat <- 0
+plotted_fin <- 0
+
+for (i in 2:length(t)) {
+  
+  if (i > 4 / step) { # Basic social distancing (awareness, schools closed)
+    alpha <- 0.4218
+    gamma <- 0.285
+    beta <- 0.0057
+    delta <- 0.0057
+    if (plotted == 0) { # Compute the new R0
+      r1 <- epsilon + zeta + lambda
+      r2 <- eta + rho
+      r3 <- theta + mu + kappa
+      r4 <- nu + xi
+      r5 <- sigma + tau
+      R0_primemisure <- alpha / r1 + beta * epsilon / (r1 * r2) + gamma * zeta / (r1 * r3) + delta * eta * epsilon / (r1 * r2 * r4) + delta * zeta * theta / (r1 * r3 * r4)
+      plotted <- 1
+    }
+  }
+  
+  if (i > 12 / step) {
+    # Screening limited to / focused on symptomatic subjects
+    epsilon <- 0.1425
+    if (plotted1 == 0) {
+      r1 <- epsilon + zeta + lambda
+      r2 <- eta + rho
+      r3 <- theta + mu + kappa
+      r4 <- nu + xi
+      r5 <- sigma + tau
+      R0_primemisureeps <- alpha / r1 + beta * epsilon / (r1 * r2) + gamma * zeta / (r1 * r3) + delta * eta * epsilon / (r1 * r2 * r4) + delta * zeta * theta / (r1 * r3 * r4)
+      plotted1 <- 1
+    }
+  }
+  
+  if (i > 22 / step) { # Social distancing: lockdown, mild effect
+      
+    alpha <- 0.36
+    beta <- 0.005
+    gamma <- 0.2
+    delta <- 0.005
+    
+    mu <- 0.008
+    nu <- 0.015
+    
+    zeta <- 0.034
+    eta <- 0.034
+    
+    lambda <- 0.08
+    rho <- 0.0171
+    kappa <- 0.0171
+    xi <- 0.0171
+    sigma <- 0.0171
+    
+    if (plotted_bis == 0) { # Compute the new R0
+      r1 <- epsilon + zeta + lambda
+      r2 <- eta + rho
+      r3 <- theta + mu + kappa
+      r4 <- nu + xi
+      r5 <- sigma + tau
+      R0_secondemisure <- (alpha * r2 * r3 * r4 + epsilon * beta * r3 * r4 + gamma * zeta * r2 * r4 + delta * eta * epsilon * r3 + delta * zeta * theta * r2) / (r1 * r2 * r3 * r4)
+      plotted_bis <- 1
+    }
+  }
+  
+  if (i > 28 / step) { # Social distancing: lockdown, strong effect
+    alpha <- 0.21
+    gamma <- 0.11
+    
+    if (plotted_tris == 0) { # Compute the new R0
+      r1 <- epsilon + zeta + lambda
+      r2 <- eta + rho
+      r3 <- theta + mu + kappa
+      r4 <- nu + xi
+      r5 <- sigma + tau
+      R0_terzemisure <- (alpha * r2 * r3 * r4 + epsilon * beta * r3 * r4 + gamma * zeta * r2 * r4 + delta * eta * epsilon * r3 + delta * zeta * theta * r2) / (r1 * r2 * r3 * r4)
+      plotted_tris <- 1
+    }
+  }
+  
+  if (i > 38 / step) { # Broader diagnosis campaign
+    epsilon <- 0.2
+    rho <- 0.02
+    kappa <- 0.02
+    xi <- 0.02
+    sigma <- 0.01
+    
+    zeta <- 0.025
+    eta <- 0.025
+    
+    if (plotted_quat == 0) { # Compute the new R0
+      r1 <- epsilon + zeta + lambda
+      r2 <- eta + rho
+      r3 <- theta + mu + kappa
+      r4 <- nu + xi
+      r5 <- sigma + tau
+      R0_quartemisure <- (alpha * r2 * r3 * r4 + epsilon * beta * r3 * r4 + gamma * zeta * r2 * r4 + delta * eta * epsilon * r3 + delta * zeta * theta * r2) / (r1 * r2 * r3 * r4)
+      plotted_quat <- 1
+    }
+  }
+  
+  # OUTLOOK: to EXPLORE POSSIBLE SCENARIOS,
+  # change the parameters (after 50 days)
+  if (i > 50 / step) {
+    
+    alpha <- 0.2100 * 0.5
+    beta <- 0.0050 * 1
+    gamma <- 0.1100 * 1
+    delta <- 0.0050 * 1
+    
+    epsilon <- 0.2000 * 1
+    theta <- 0.3705 * 1
+    
+    zeta <- 0.0250 * 1
+    eta <- 0.0250 * 1
+    
+    mu <- 0.008 * 1
+    nu <- 0.0150 * 1
+    
+    tau <- 0.0100 * 1
+    
+    lambda <- 0.0800 * 1
+    rho <- 0.0200 * 1
+    kappa <- 0.0200 * 1
+    xi <- 0.0200 * 1
+    sigma <- 0.0100 * 1
+    
+    ki <- 0
+    
+    if (plotted_fin == 0) { # Compute the new R0
+      r1 <- epsilon + zeta + lambda
+      r2 <- eta + rho
+      r3 <- theta + mu + kappa
+      r4 <- nu + xi
+      r5 <- sigma + tau
+      R0_final <- (alpha * r2 * r3 * r4 + epsilon * beta * r3 * r4 + gamma * zeta * r2 * r4 + delta * eta * epsilon * r3 + delta * zeta * theta * r2) / (r1 * r2 * r3 * r4)
+      plotted_fin <- 1
+    }
+  }
+  
+  # Compute the system evolution
+  B <- matrix(c(
+    -alpha * x[2] - beta * x[3] - gamma * x[4] - delta * x[5], 0, 0, 0, 0, 0, ki, 0, 0, 0,
+    alpha * x[2] + beta * x[3] + gamma * x[4] + delta * x[5], -(epsilon + zeta + lambda), 0, 0, 0, 0, 0, 0, 0, 0,
+    0, epsilon, -(eta + rho), 0, 0, 0, 0, 0, 0, 0,
+    0, zeta, 0, -(theta + mu + kappa), 0, 0, 0, 0, 0, 0,
+    0, 0, eta, theta, -(nu + xi), 0, 0, 0, 0, 0,
+    0, 0, 0, mu, nu, -(sigma + tau), 0, 0, 0, 0,
+    0, lambda, rho, kappa, xi, sigma, -ki, 0, 0, 0,
+    0, 0, 0, 0, 0, tau, 0, 0, 0, 0,
+    0, 0, rho, 0, xi, sigma, 0, 0, 0, 0,
+    alpha * x[2] + beta * x[3] + gamma * x[4] + delta * x[5], 0, 0, 0, 0, 0, 0, 0, 0, 0
+  ), nrow = 10, ncol = 10, byrow = TRUE)
+  
+  x <- x + B %*% x * step
+  
+  # Update variables
+  S[i] <- x[1]
+  I[i] <- x[2]
+  D[i] <- x[3]
+  A[i] <- x[4]
+  R[i] <- x[5]
+  T[i] <- x[6]
+  H[i] <- x[7]
+  E[i] <- x[8]
+  
+  diagnosed_H[i] <- x[9]
+  actual_infected[i] <- x[10]
+  
+  # Update Case Fatality Rate
+  M[i] <- E[i] / (S[1] - S[i])
+  P[i] <- E[i] / ((epsilon * r3 + (theta + mu) * zeta) * (I[1] + S[1] - I[i] - S[i]) / (r1 * r3) + (theta + mu) * (A[1] - A[i]) / r3)
+}
+
+# FINAL VALUES
+# Variables
+Sbar <- S[length(t)]
+Ibar <- I[length(t)]
+Dbar <- D[length(t)]
+Abar <- A[length(t)]
+Rbar <- R[length(t)]
+Tbar <- T[length(t)]
+Hbar <- H[length(t)]
+Ebar <- E[length(t)]
+
+# Case fatality rate
+Mbar <- M[length(t)]
+Pbar <- P[length(t)]
+
+# Case fatality rate from formulas
+Mbar1 <- Ebar / (S[1] - Sbar)
+Pbar1 <- Ebar / ((epsilon * r3 + (theta + mu) * zeta) * (I[1] + S[1] - Sbar - Ibar) / (r1 * r3) + (theta + mu) * (A[1] - Abar) / r3)
+
+```
+
+
+## Fig. 3c: Predicted epidemic evolution: actual vs diagnosed cases of infection (strengthened lockdown)
+```{r}
+# Assuming data is loaded as data.frame with columns t, actual_infected, I, D, A, R, T, H, E, diagnosed_H
+# Replace the data.frame below with your actual data.frame
+data <- data.frame(t = t, actual_infected = actual_infected, I = I, D = D, A = A, R = R, T = T, H = H, E = E, diagnosed_H = diagnosed_H)
+
+plot7 <- ggplot(data, aes(t)) +
+  geom_line(aes(y = actual_infected), color = "blue", linetype = "solid") +
+  geom_line(aes(y = I + D + A + R + T), color = "red", linetype = "solid") +
+  geom_line(aes(y = H), color = "green", linetype = "solid") +
+  geom_line(aes(y = E), color = "black", linetype = "solid") +
+  geom_line(aes(y = D + R + T + E + diagnosed_H), color = "blue", linetype = "dotted") +
+  geom_line(aes(y = D + R + T), color = "red", linetype = "dotted") +
+  geom_line(aes(y = diagnosed_H), color = "green", linetype = "dotted") +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "Fig. 3c: Predicted epidemic evolution: actual vs diagnosed cases of infection (strengthened lockdown)") +
+    scale_x_continuous(limits = c(min(t), max(t)), breaks = seq(50,350, by = 50)) +
+  scale_y_continuous(limits = c(0, 0.015)) +
+  theme_minimal()
+
+# Custom legend
+legend_data <- data.frame(
+  x = min(t),
+  y = seq(0.014, 0.008, length.out = 7),
+  color = c("blue", "red", "green", "black", "blue", "red", "green"),
+  linetype = c("solid", "solid", "solid", "solid", "dotted", "dotted", "dotted"),
+  label = c("Cumulative Infected", "Current Total Infected", "Recovered", "Deaths", "Diagnosed Cumulative Infected", "Diagnosed Current Total Infected", "Diagnosed Recovered")
+)
+
+plot7 <- plot7 +
+  geom_segment(data = legend_data, aes(x = x, xend = x + 5, y = y, yend = y, color = color, linetype = linetype), size = 1) +
+  geom_text(data = legend_data, aes(x = x + 7, y = y, label = label), hjust = 0) +
+  scale_color_identity(guide = "none") +
+  scale_linetype_identity(guide = "none") +
+  theme(legend.position = "none")
+
+print(plot7)
+
+ggsave("fig3c.pdf", plot = plot7, width = 24, height = 16, units = "cm")
+
+```
+
+
+## Fig. 3d: Predicted evolution of infected subpopulations (strengthened lockdown)
+```{r}
+# Assuming data is loaded as data.frame with columns t, I, D, A, R, T
+# Replace the data.frame below with your actual data.frame
+data <- data.frame(t = t, I = I, D = D, A = A, R = R, T = T)
+
+plot8 <- ggplot(data, aes(t)) +
+  geom_line(aes(y = I), color = "blue") +
+  geom_line(aes(y = D), color = "cyan") +
+  geom_line(aes(y = A), color = "green") +
+  geom_line(aes(y = R), color = "magenta") +
+  geom_line(aes(y = T), color = "red") +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "Fig. 3d: Predicted evolution of infected subpopulations (strengthened lockdown)") +
+  scale_x_continuous(breaks = seq(50, 350, by = 50)) +
+    ylim(0, 1.1e-3) +
+  theme_minimal()
+
+# Custom legend
+legend_data <- data.frame(
+  x = max(t) - 50,
+  y = seq(0.0009, 0.0006, length.out = 5),
+  color = c("blue", "cyan", "green", "magenta", "red"),
+  label = c("Infected ND AS", "Infected D AS", "Infected ND S", "Infected D S", "Infected D IC")
+)
+
+plot8 <- plot8 +
+  geom_segment(data = legend_data, aes(x = x, xend = x + 5, y = y, yend = y, color = color), size = 1) +
+  geom_text(data = legend_data, aes(x = x + 7, y = y, label = label), hjust = 0) +
+  scale_color_identity(guide = "none") +
+  theme(legend.position = "none")
+
+print(plot8)
+
+ggsave("fig3d.pdf", plot = plot4, width = 24, height = 16, units = "cm")
+
+```
+
+
+
+
+#FIGURE 4A,B
+
+## SETUP
+```{r}
+# DATA
+#######################################
+
+# Italian population
+population <- 60e6
+
+#######################################
+# PARAMETERS
+#######################################
+
+# Simulation horizon: CAN BE MODIFIED AT ONE'S WILL
+Horizon <- 350
+
+# Plot yes/no: SET TO 1 IF PDF FIGURES MUST BE GENERATED, 0 OTHERWISE
+plotPDF <- 0
+
+# Time-step for Euler discretisation of the continuous-time system
+step <- 0.01
+
+# Transmission rate due to contacts with UNDETECTED asymptomatic infected
+alpha <- 0.57
+# Transmission rate due to contacts with DETECTED asymptomatic infected
+beta <- 0.0114
+# Transmission rate due to contacts with UNDETECTED symptomatic infected
+gamma <- 0.456
+# Transmission rate due to contacts with DETECTED symptomatic infected
+delta <- 0.0114
+
+# Detection rate for ASYMPTOMATIC
+epsilon <- 0.171
+# Detection rate for SYMPTOMATIC
+theta <- 0.3705
+
+# Worsening rate: UNDETECTED asymptomatic infected becomes symptomatic
+zeta <- 0.1254
+# Worsening rate: DETECTED asymptomatic infected becomes symptomatic
+eta <- 0.1254
+
+# Worsening rate: UNDETECTED symptomatic infected develop life-threatening
+# symptoms
+mu <- 0.0171
+# Worsening rate: DETECTED symptomatic infected develop life-threatening
+# symptoms
+nu <- 0.0274
+
+# Mortality rate for infected with life-threatening symptoms
+tau <- 0.01
+
+# Recovery rate for undetected asymptomatic infected
+lambda <- 0.0342
+# Recovery rate for detected asymptomatic infected
+rho <- 0.0342
+# Recovery rate for undetected symptomatic infected
+kappa <- 0.0171
+# Recovery rate for detected symptomatic infected
+xi <- 0.0171
+# Recovery rate for life-threatened symptomatic infected
+sigma <- 0.0171
+
+# Rate of loss of immunity
+ki <- 0
+
+#######################################
+# DEFINITIONS
+#######################################
+
+# Parameters
+r1 <- epsilon + zeta + lambda
+r2 <- eta + rho
+r3 <- theta + mu + kappa
+r4 <- nu + xi
+r5 <- sigma + tau
+
+# Initial R0
+initial_R0 <- alpha / r1 + beta * epsilon / (r1 * r2) + gamma * zeta / (r1 * r3) + delta * eta * epsilon / (r1 * r2 * r4) + delta * zeta * theta / (r1 * r3 * r4)
+
+# Time horizon
+t <- seq(1, Horizon, by=step)
+
+# Vectors for time evolution of variables
+S <- rep(0, length(t))
+I <- rep(0, length(t))
+D <- rep(0, length(t))
+A <- rep(0, length(t))
+R <- rep(0, length(t))
+T <- rep(0, length(t))
+H <- rep(0, length(t))
+diagnosed_H <- rep(0, length(t)) # DIAGNOSED recovered only!
+E <- rep(0, length(t))
+
+# Vectors for time evolution of actual/perceived Case Fatality Rate
+M <- rep(0, length(t))
+P <- rep(0, length(t))
+
+#######################################
+# INITIAL CONDITIONS
+#######################################
+
+I[1] <- 200 / population
+D[1] <- 20 / population
+A[1] <- 1 / population
+R[1] <- 2 / population
+T[1] <- 0.00
+H[1] <- 0.00
+E[1] <- 0.00
+S[1] <- 1 - I[1] - D[1] - A[1] - R[1] - T[1] - H[1] - E[1]
+
+diagnosed_H[1] <- 0.00 # DIAGNOSED recovered only
+actual_infected[1] <- I[1] + D[1] + A[1] + R[1] + T[1] # Actual currently infected
+
+M[1] <- 0
+P[1] <- 0
+
+# Whole state vector
+x <- c(S[1], I[1], D[1], A[1], R[1], T[1], H[1], E[1], diagnosed_H[1], actual_infected[1])
+
+#######################################
+# SIMULATION
+#######################################
+
+# "Control" binary variables to compute the new R0 every time a policy has
+# changed the parameters
+plotted <- 0
+plotted1 <- 0
+plotted_bis <- 0
+plotted_tris <- 0
+plotted_quat <- 0
+plotted_fin <- 0
+
+for (i in 2:length(t)) {
+  
+  if (i > 4 / step) { # Basic social distancing (awareness, schools closed)
+    alpha <- 0.4218
+    gamma <- 0.285
+    beta <- 0.0057
+    delta <- 0.0057
+    if (plotted == 0) { # Compute the new R0
+      r1 <- epsilon + zeta + lambda
+      r2 <- eta + rho
+      r3 <- theta + mu + kappa
+      r4 <- nu + xi
+      r5 <- sigma + tau
+      R0_first_measures <- alpha / r1 + beta * epsilon / (r1 * r2) + gamma * zeta / (r1 * r3) + delta * eta * epsilon / (r1 * r2 * r4) + delta * zeta * theta / (r1 * r3 * r4)
+      plotted <- 1
+    }
+  }
+  
+  if (i > 12 / step) {
+    # Screening limited to / focused on symptomatic subjects
+    epsilon <- 0.1425
+    if (plotted1 == 0) {
+      r1 <- epsilon + zeta + lambda
+      r2 <- eta + rho
+      r3 <- theta + mu + kappa
+      r4 <- nu + xi
+      r5 <- sigma + tau
+      R0_first_measures_eps <- alpha / r1 + beta * epsilon / (r1 * r2) + gamma * zeta / (r1 * r3) + delta * eta * epsilon / (r1 * r2 * r4) + delta * zeta * theta / (r1 * r3 * r4)
+      plotted1 <- 1
+    }
+  }
+
+
+  if (i > 22 / step) { # Social distancing: lockdown, mild effect
+    alpha <- 0.36
+    beta <- 0.005
+    gamma <- 0.2
+    delta <- 0.005
+    
+    mu <- 0.008
+    nu <- 0.015
+    
+    zeta <- 0.034
+    eta <- 0.034
+    
+    lambda <- 0.08
+    rho <- 0.0171
+    kappa <- 0.0171
+    xi <- 0.0171
+    sigma <- 0.0171
+    
+    if (plotted_bis == 0) { # Compute the new R0
+      r1 <- epsilon + zeta + lambda
+      r2 <- eta + rho
+      r3 <- theta + mu + kappa
+      r4 <- nu + xi
+      r5 <- sigma + tau
+      R0_second_measures <- (alpha * r2 * r3 * r4 + epsilon * beta * r3 * r4 + gamma * zeta * r2 * r4 + delta * eta * epsilon * r3 + delta * zeta * theta * r2) / (r1 * r2 * r3 * r4)
+      plotted_bis <- 1
+    }
+  }
+  
+  if (i > 28 / step) { # Social distancing: lockdown, strong effect
+    alpha <- 0.21
+    gamma <- 0.11
+    
+    if (plotted_tris == 0) { # Compute the new R0
+      r1 <- epsilon + zeta + lambda
+      r2 <- eta + rho
+      r3 <- theta + mu + kappa
+      r4 <- nu + xi
+      r5 <- sigma + tau
+      R0_third_measures <- (alpha * r2 * r3 * r4 + epsilon * beta * r3 * r4 + gamma * zeta * r2 * r4 + delta * eta * epsilon * r3 + delta * zeta * theta * r2) / (r1 * r2 * r3 * r4)
+      plotted_tris <- 1
+    }
+  }
+  
+  if (i > 38 / step) { # Broader diagnosis campaign
+    epsilon <- 0.2
+    rho <- 0.02
+    kappa <- 0.02
+    xi <- 0.02
+    sigma <- 0.01
+    
+    zeta <- 0.025
+    eta <- 0.025
+    
+    if (plotted_quat == 0) { # Compute the new R0
+      r1 <- epsilon + zeta + lambda
+      r2 <- eta + rho
+      r3 <- theta + mu + kappa
+      r4 <- nu + xi
+      r5 <- sigma + tau
+      R0_fourth_measures <- (alpha * r2 * r3 * r4 + epsilon * beta * r3 * r4 + gamma * zeta * r2 * r4 + delta * eta * epsilon * r3 + delta * zeta * theta * r2) / (r1 * r2 * r3 * r4)
+      plotted_quat <- 1
+    }
+  }
+  
+  # OUTLOOK: to EXPLORE POSSIBLE SCENARIOS,
+  # change the parameters (after 50 days)
+  if (i > 50 / step) {
+    
+    alpha <- 0.2100
+    beta <- 0.0050
+    gamma <- 0.1100
+    delta <- 0.0050
+    
+    epsilon <- 0.2000 * 2
+    theta <- 0.3705
+    
+    zeta <- 0.0250
+    eta <- 0.0250
+    
+    mu <- 0.008
+    nu <- 0.0150
+    
+    tau <- 0.0100
+    
+    lambda <- 0.0800
+    rho <- 0.0200
+    kappa <- 0.0200
+    xi <- 0.0200
+    sigma <- 0.0100
+    
+    ki <- 0
+    
+    if (plotted_fin == 0) {
+      # Compute the new R0
+      r1 <- epsilon + zeta + lambda
+      r2 <- eta + rho
+      r3 <- theta + mu + kappa
+      r4 <- nu + xi
+      r5 <- sigma + tau
+      R0_final <- (alpha * r2 * r3 * r4 + epsilon * beta * r3 * r4 + gamma * zeta * r2 * r4 + delta * eta * epsilon * r3 + delta * zeta * theta * r2) / (r1 * r2 * r3 * r4)
+      plotted_fin <- 1
+    }
+    
+  }
+  
+  # Compute the system evolution
+  
+  B <- matrix(c(
+    -alpha * x[2] - beta * x[3] - gamma * x[4] - delta * x[5], 0, 0, 0, 0, 0, ki, 0, 0, 0,
+    alpha * x[2] + beta * x[3] + gamma * x[4] + delta * x[5], -(epsilon + zeta + lambda), 0, 0, 0, 0, 0, 0, 0, 0,
+    0, epsilon, -(eta + rho), 0, 0, 0, 0, 0, 0, 0,
+    0, zeta, 0, -(theta + mu + kappa), 0, 0, 0, 0, 0, 0,
+    0, 0, eta, theta, -(nu + xi), 0, 0, 0, 0, 0,
+    0, 0, 0, mu, nu, -(sigma + tau), 0, 0, 0, 0,
+    0, lambda, rho, kappa, xi, sigma, -ki, 0, 0, 0,
+    0, 0, 0, 0, 0, tau, 0, 0, 0, 0,
+    0, 0, rho, 0, xi, sigma, 0, 0, 0, 0,
+    alpha * x[2] + beta * x[3] + gamma * x[4] + delta * x[5], 0, 0, 0, 0, 0, 0, 0, 0, 0
+  ), nrow = 10, byrow = TRUE)
+  # Compute the system evolution
+  x <- x + B %*% x * step
+  
+  # Update variables
+  S[i] <- x[1]
+  I[i] <- x[2]
+  D[i] <- x[3]
+  A[i] <- x[4]
+  R[i] <- x[5]
+  T[i] <- x[6]
+  H[i] <- x[7]
+  E[i] <- x[8]
+  
+  diagnosed_H[i] <- x[9]
+  actual_infected[i] <- x[10]
+  
+  # Update Case Fatality Rate
+  M[i] <- E[i] / (S[1] - S[i])
+  P[i] <- E[i] / ((epsilon * r3 + (theta + mu) * zeta) * (I[1] + S[1] - I[i] - S[i]) / (r1 * r3) + (theta + mu) * (A[1] - A[i]) / r3)
+
+# FINAL VALUES
+
+# Variables
+S_final <- S[length(t)]
+I_final <- I[length(t)]
+D_final <- D[length(t)]
+A_final <- A[length(t)]
+R_final <- R[length(t)]
+T_final <- T[length(t)]
+H_final <- H[length(t)]
+E_final <- E[length(t)]
+
+# Case fatality rate
+M_final <- M[length(t)]
+P_final <- P[length(t)]
+
+# Case fatality rate from formulas
+M_formula <- E_final / (S[1] - S_final)
+P_formula <- E_final / ((epsilon * r3 + (theta + mu) * zeta) * (I[1] + S[1] - S_final - I_final) / (r1 * r3) + (theta + mu) * (A[1] - A_final) / r3)
+}
+
+```
+
+
+## Fig. 4a: Predicted epidemic evolution: actual vs diagnosed cases of infection (widespread testing)
+
+```{r}
+# Replace the data.frame below with your actual data.frame
+data <- data.frame(t = t, actual_infected = actual_infected, I = I, D = D, A = A, R = R, T = T, H = H, E = E, diagnosed_H = diagnosed_H)
+
+plot9 <- ggplot(data, aes(t)) +
+  geom_line(aes(y = actual_infected), color = "blue", linetype = "solid") +
+  geom_line(aes(y = I + D + A + R + T), color = "red", linetype = "solid") +
+  geom_line(aes(y = H), color = "green", linetype = "solid") +
+  geom_line(aes(y = E), color = "black", linetype = "solid") +
+  geom_line(aes(y = D + R + T + E + diagnosed_H), color = "blue", linetype = "dotted") +
+  geom_line(aes(y = D + R + T), color = "red", linetype = "dotted") +
+  geom_line(aes(y = diagnosed_H), color = "green", linetype = "dotted") +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "Fig. 4a: Predicted epidemic evolution: actual vs diagnosed cases of infection (widespread testing)") +
+  scale_x_continuous(limits = c(min(t), max(t)), breaks = c(50, 100, 150, 200, 250, 300, 350)) +
+  ylim(0, 0.015) +
+  theme_minimal()
+
+# Custom legend
+legend_data <- data.frame(
+  x = min(t),
+  y = seq(0.014, 0.008, length.out = 7),
+  color = c("blue", "red", "green", "black", "blue", "red", "green"),
+  linetype = c("solid", "solid", "solid", "solid", "dotted", "dotted", "dotted"),
+  label = c("Cumulative Infected", "Current Total Infected", "Recovered", "Deaths", "Diagnosed Cumulative Infected", "Diagnosed Current Total Infected", "Diagnosed Recovered")
+)
+
+plot9 <- plot9 +
+  geom_segment(data = legend_data, aes(x = x, xend = x + 5, y = y, yend = y, color = color, linetype = linetype), size = 1) +
+  geom_text(data = legend_data, aes(x = x + 7, y = y, label = label), hjust = 0) +
+  scale_color_identity(guide = "none") +
+  scale_linetype_identity(guide = "none") +
+  theme(legend.position = "east")
+
+# Print the plot
+print(plot9)
+
+# Save the plot to a PDF file
+ggsave("fig4a.pdf", plot = plot9, width = 24, height = 16, units = "cm")
+
+```
+
+
+## Fig. 4b: Predicted evolution of infected subpopulations (widespread testing)
+```{r}
+# Load required libraries
+library(ggplot2)
+
+# Create a data frame with the necessary variables
+df <- data.frame(t = t, I = I, D = D, A = A, R = R, T = T)
+
+# Create the plot
+plot10 <- ggplot(df, aes(x = t)) +
+  geom_line(aes(y = I), color = "blue") +
+  geom_line(aes(y = D), color = "cyan") +
+  geom_line(aes(y = A), color = "green") +
+  geom_line(aes(y = R), color = "magenta") +
+  geom_line(aes(y = T), color = "red") +
+  labs(title = "Fig. 4b: Predicted evolution of infected subpopulations (widespread testing)", x = "Time (days)", y = "Cases (fraction of the population)") +
+  scale_y_continuous(limits = c(0, 1.1e-3)) +
+  scale_x_continuous(limits = c(min(t), 350), breaks = seq(50, 350, by = 50)) +
+  theme_minimal()
+
+# Custom legend
+legend_data <- data.frame(
+  x = max(t) - 100,
+  y = seq(1.1e-3, 0.6e-3, length.out = 5),
+  color = c("blue", "cyan", "green", "magenta", "red"),
+  label = c("Infected ND AS", "Infected D AS", "Infected ND S", "Infected D S", "Infected D IC")
+)
+
+plot10 <- plot10 +
+  geom_segment(data = legend_data, aes(x = x, xend = x + 5, y = y, yend = y, color = color), size = 1) +
+  geom_text(data = legend_data, aes(x = x + 7, y = y, label = label), hjust = 0) +
+  scale_color_identity(guide = "none") +
+  theme(legend.position = "none")
+
+# Print the plot
+print(plot10)
+
+# Save the plot as a PDF
+ggsave("fig4b.pdf", plot = plot10, width = 24, height = 16, units = "cm")
+
+```
+
+
+
+
+
+
+
+#FIGURE 4C,D
+
+## SETUP
+```{r}
+# DATA
+########################################
+
+# Italian population
+population <- 60e6
+
+########################################
+# PARAMETERS
+########################################
+
+# Simulation horizon: CAN BE MODIFIED AT ONE'S WILL
+horizon <- 350
+
+# Plot yes/no: SET TO 1 IF PDF FIGURES MUST BE GENERATED, 0 OTHERWISE
+plotPDF <- 0
+
+# Time-step for Euler discretisation of the continuous-time system
+step <- 0.01
+
+# Transmission rate due to contacts with UNDETECTED asymptomatic infected
+alpha <- 0.57
+# Transmission rate due to contacts with DETECTED asymptomatic infected
+beta <- 0.0114
+# Transmission rate due to contacts with UNDETECTED symptomatic infected
+gamma <- 0.456
+# Transmission rate due to contacts with DETECTED symptomatic infected
+delta <- 0.0114
+
+# Detection rate for ASYMPTOMATIC
+epsilon <- 0.171
+# Detection rate for SYMPTOMATIC
+theta <- 0.3705
+
+# Worsening rate: UNDETECTED asymptomatic infected becomes symptomatic
+zeta <- 0.1254
+# Worsening rate: DETECTED asymptomatic infected becomes symptomatic
+eta <- 0.1254
+
+# Worsening rate: UNDETECTED symptomatic infected develop life-threatening
+# symptoms
+mu <- 0.0171
+# Worsening rate: DETECTED symptomatic infected develop life-threatening
+# symptoms
+nu <- 0.0274
+
+# Mortality rate for infected with life-threatening symptoms
+tau <- 0.01
+
+# Recovery rate for undetected asymptomatic infected
+lambda <- 0.0342
+# Recovery rate for detected asymptomatic infected
+rho <- 0.0342
+# Recovery rate for undetected symptomatic infected
+kappa <- 0.0171
+# Recovery rate for detected symptomatic infected
+xi <- 0.0171
+# Recovery rate for life-threatened symptomatic infected
+sigma <- 0.0171
+
+# Rate of loss of immunity
+ki <- 0
+
+
+
+
+
+
+#DEFINITIONS
+######################################
+
+#Parameters
+r1 <- epsilon + zeta + lambda
+r2 <- eta + rho
+r3 <- theta + mu + kappa
+r4 <- nu + xi
+r5 <- sigma + tau
+
+#Initial R0
+R0_initial <- alpha / r1 + beta * epsilon / (r1 * r2) + gamma * zeta / (r1 * r3) + delta * eta * epsilon / (r1 * r2 * r4) + delta * zeta * theta / (r1 * r3 * r4)
+
+#Time horizon
+t <- seq(1, horizon, by = step)
+
+#Vectors for time evolution of variables
+S <- numeric(length(t))
+I <- numeric(length(t))
+D <- numeric(length(t))
+A <- numeric(length(t))
+R <- numeric(length(t))
+T <- numeric(length(t))
+H <- numeric(length(t))
+diagnosed_H <- numeric(length(t)) # DIAGNOSED recovered only!
+E <- numeric(length(t))
+
+#Vectors for time evolution of actual/perceived Case Fatality Rate
+M <- numeric(length(t))
+P <- numeric(length(t))
+
+######################################
+
+#INITIAL CONDITIONS
+######################################
+
+I[1] <- 200 / population
+D[1] <- 20 / population
+A[1] <- 1 / population
+R[1] <- 2 / population
+T[1] <- 0.00
+H[1] <- 0.00
+E[1] <- 0.00
+S[1] <- 1 - I[1] - D[1] - A[1] - R[1] - T[1] - H[1] - E[1]
+
+diagnosed_H[1] <- 0.00 # DIAGNOSED recovered only
+actual_infected[1] <- I[1] + D[1] + A[1] + R[1] + T[1] # Actual currently infected
+
+M[1] <- 0
+P[1] <- 0
+
+#Whole state vector
+x <- c(S[1], I[1], D[1], A[1], R[1], T[1], H[1], E[1], diagnosed_H[1], actual_infected[1])
+
+#SIMULATION
+######################################
+
+#"Control" binary variables to compute the new R0 every time a policy has changed the parameters
+plotted <- 0
+plotted1 <- 0
+plotted_bis <- 0
+plotted_tris <- 0
+plotted_quat <- 0
+plotted_fin <- 0
+
+for (i in 2:length(t)) {if (i > 4 / step) { # Basic social distancing (awareness, schools closed)
+    alpha <- 0.4218
+    gamma <- 0.285
+    beta <- 0.0057
+    delta <- 0.0057
+    if (plotted == 0) { # Compute the new R0
+        r1 <- epsilon + zeta + lambda
+        r2 <- eta + rho
+        r3 <- theta + mu + kappa
+        r4 <- nu + xi
+        r5 <- sigma + tau
+        R0_first_measure <- alpha / r1 + beta * epsilon / (r1 * r2) + gamma * zeta / (r1 * r3) + delta * eta * epsilon / (r1 * r2 * r4) + delta * zeta * theta / (r1 * r3 * r4)
+        plotted <- 1
+    }
+}
+
+if (i > 12 / step) {
+    # Screening limited to / focused on symptomatic subjects
+    epsilon <- 0.1425
+    if (plotted1 == 0) {
+        r1 <- epsilon + zeta + lambda
+        r2 <- eta + rho
+        r3 <- theta + mu + kappa
+        r4 <- nu + xi
+        r5 <- sigma + tau
+        R0_first_measure_eps <- alpha / r1 + beta * epsilon / (r1 * r2) + gamma * zeta / (r1 * r3) + delta * eta * epsilon / (r1 * r2 * r4) + delta * zeta * theta / (r1 * r3 * r4)
+        plotted1 <- 1
+    }
+}
+
+if (i > 22 / step) { # Social distancing: lockdown, mild effect
+    
+    alpha <- 0.36
+    beta <- 0.005
+    gamma <- 0.2
+    delta <- 0.005
+    
+    mu <- 0.008
+    nu <- 0.015
+    
+    zeta <- 0.034
+    eta <- 0.034
+    
+    lambda <- 0.08
+    rho <- 0.0171
+    kappa <- 0.0171
+    xi <- 0.0171
+    sigma <- 0.0171
+    
+    if (plotted_bis == 0) { # Compute the new R0
+        r1 <- epsilon + zeta + lambda
+        r2 <- eta + rho
+        r3 <- theta + mu + kappa
+        r4 <- nu + xi
+        r5 <- sigma + tau
+        R0_second_measure <- (alpha * r2 * r3 * r4 + epsilon * beta * r3 * r4 + gamma * zeta * r2 * r4 + delta * eta * epsilon * r3 + delta * zeta * theta * r2) / (r1 * r2 * r3 * r4)
+        plotted_bis <- 1
+    }
+}
+
+if (i > 28 / step) { # Social distancing: lockdown, strong effect
+    
+alpha <- 0.21
+gamma <- 0.11
+
+if (plotted_tris == 0) { # Compute the new R0
+  r1 <- epsilon + zeta + lambda
+  r2 <- eta + rho
+  r3 <- theta + mu + kappa
+  r4 <- nu + xi
+  r5 <- sigma + tau
+  R0_terzemisure <- (alpha * r2 * r3 * r4 + epsilon * beta * r3 * r4 + gamma * zeta * r2 * r4 + delta * eta * epsilon * r3 + delta * zeta * theta * r2) / (r1 * r2 * r3 * r4)
+  plotted_tris <- 1
+}
+}
+
+if (i > 38 / step) { # Broader diagnosis campaign
+  epsilon <- 0.2
+  rho <- 0.02
+  kappa <- 0.02
+  xi <- 0.02
+  sigma <- 0.01
+
+  zeta <- 0.025
+  eta <- 0.025
+
+  if (plotted_quat == 0) { # Compute the new R0
+    r1 <- epsilon + zeta + lambda
+    r2 <- eta + rho
+    r3 <- theta + mu + kappa
+    r4 <- nu + xi
+    r5 <- sigma + tau
+    R0_quartemisure <- (alpha * r2 * r3 * r4 + epsilon * beta * r3 * r4 + gamma * zeta * r2 * r4 + delta * eta * epsilon * r3 + delta * zeta * theta * r2) / (r1 * r2 * r3 * r4)
+    plotted_quat <- 1
+  }
+}
+
+# OUTLOOK: to EXPLORE POSSIBLE SCENARIOS,
+# change the parameters (after 50 days)
+if (i > 50 / step) {
+  alpha <- 0.2100 * 2
+  beta <- 0.0050 * 1
+  gamma <- 0.1100 * 1
+  delta <- 0.0050 * 1
+
+  epsilon <- 0.2000 * 3
+  theta <- 0.3705 * 1
+
+  zeta <- 0.0250 * 1
+  eta <- 0.0250 * 1
+
+  mu <- 0.008 * 1
+  nu <- 0.0150 * 1
+
+  tau <- 0.0100 * 1
+
+  lambda <- 0.0800 * 1
+  rho <- 0.0200 * 1
+  kappa <- 0.0200 * 1
+  xi <- 0.0200 * 1
+  sigma <- 0.0100 * 1
+
+  ki <- 0
+
+  if (plotted_fin == 0) { # Compute the new R0
+    r1 <- epsilon + zeta + lambda
+    r2 <- eta + rho
+    r3 <- theta + mu + kappa
+    r4 <- nu + xi
+    r5 <- sigma + tau
+    R0_final <- (alpha * r2 * r3 * r4 + epsilon * beta * r3 * r4 + gamma * zeta * r2 * r4 + delta * eta * epsilon * r3 + delta * zeta * theta * r2) / (r1 * r2 * r3 * r4)
+    plotted_fin <- 1
+  }
+}
+
+
+# Compute the system evolution
+
+B <- matrix(c(
+  -alpha * x[2] - beta * x[3] - gamma * x[4] - delta * x[5], 0, 0, 0, 0, 0, ki, 0, 0, 0,
+  alpha * x[2] + beta * x[3] + gamma * x[4] + delta * x[5], -(epsilon + zeta + lambda), 0, 0, 0, 0, 0, 0, 0, 0,
+  0, epsilon, -(eta + rho), 0, 0, 0, 0, 0, 0, 0,
+  0, zeta, 0, -(theta + mu + kappa), 0, 0, 0, 0, 0, 0,
+  0, 0, eta, theta, -(nu + xi), 0, 0, 0, 0, 0,
+  0, 0, 0, mu, nu, -(sigma + tau), 0, 0, 0, 0,
+  0, lambda, rho, kappa, xi, sigma, -ki, 0, 0, 0,
+  0, 0, 0, 0, 0, tau, 0, 0, 0, 0,
+  0, 0, rho, 0, xi, sigma, 0, 0, 0, 0,
+  alpha * x[2] + beta * x[3] + gamma * x[4] + delta * x[5], 0, 0, 0, 0, 0, 0, 0, 0, 0
+), nrow = 10, byrow = TRUE)
+
+x <- x + B %*% x * step
+
+# Update variables
+
+S[i] <- x[1]
+I[i] <- x[2]
+D[i] <- x[3]
+A[i] <- x[4]
+R[i] <- x[5]
+T[i] <- x[6]
+H[i] <- x[7]
+E[i] <- x[8]
+
+diagnosed_H[i] <- x[9]
+actual_infected[i] <- x[10]
+
+# Update Case Fatality Rate
+
+M[i] <- E[i] / (S[1] - S[i])
+P[i] <- E[i] / ((epsilon * r3 + (theta + mu) * zeta) * (I[1] + S[1] - I[i] - S[i]) / (r1 * r3) + (theta + mu) * (A[1] - A[i]) / r3)
+
+# FINAL VALUES
+######################################
+
+# Variables
+S_final <- S[length(t)]
+I_final <- I[length(t)]
+D_final <- D[length(t)]
+A_final <- A[length(t)]
+R_final <- R[length(t)]
+T_final <- T[length(t)]
+H_final <- H[length(t)]
+E_final <- E[length(t)]
+
+# Case fatality rate
+M_final <- M[length(t)]
+P_final <- P[length(t)]
+
+# Case fatality rate from formulas
+M_final1 <- E_final / (S[1] - S_final)
+P_final1 <- E_final / ((epsilon * r3 + (theta + mu) * zeta) * (I[1] + S[1] - S_final - I_final) / (r1 * r3) + (theta + mu) * (A[1] - A_final) / r3)
+}
+```
+
+
+## Fig. 4c: Predicted epidemic evolution: actual vs diagnosed cases of infection (widespread testing; weakened lockdown)
 ```{r}
 library(ggplot2)
-library(gridExtra)
 
-# Long-term evolution: actual vs diagnosed cases of infection
-plot1 <- ggplot(data.frame(t = t, actual_infected = actual_infected, I = I, D = D, A = A, R = R, T = T, H = H, E = E, diagnosed_H = diagnosed_H), aes(t)) +
-  geom_line(aes(y = actual_infected, color = "Cumulative Infected")) +
-  geom_line(aes(y = I + D + A + R + T, color = "Current Total Infected")) +
-  geom_line(aes(y = H, color = "Recovered")) +
-  geom_line(aes(y = E, color = "Deaths")) +
-  geom_line(aes(y = D + R + T + E + diagnosed_H, linetype = "Diagnosed Cumulative Infected", color = "Diagnosed Cumulative Infected")) +
-  geom_line(aes(y = D + R + T, linetype = "Diagnosed Current Total Infected", color = "Diagnosed Current Total Infected")) +
-  geom_line(aes(y = diagnosed_H, linetype = "Diagnosed Recovered", color = "Diagnosed Recovered")) +
-  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "Long-term evolution: actual vs diagnosed cases of infection") +
-  scale_color_manual(values = c("Cumulative Infected" = "blue", "Current Total Infected" = "red", "Recovered" = "green", "Deaths" = "black", "Diagnosed Cumulative Infected" = "blue", "Diagnosed Current Total Infected" = "red", "Diagnosed Recovered" = "green")) +
-  scale_linetype_manual(values = c("Diagnosed Cumulative Infected" = "dashed", "Diagnosed Current Total Infected" = "dashed", "Diagnosed Recovered" = "dashed")) +
-  theme_minimal() +
-  theme(legend.position = "northwest")
-print(plot1)
+# Assuming data is loaded as data.frame with columns t, actual_infected, I, D, A, R, T, H, E, diagnosed_H
+# Replace the data.frame below with your actual data.frame
+data <- data.frame(t = t, actual_infected = actual_infected, I = I, D = D, A = A, R = R, T = T, H = H, E = E, diagnosed_H = diagnosed_H)
+
+plot11 <- ggplot(data, aes(t)) +
+  geom_line(aes(y = actual_infected), color = "blue", linetype = "solid") +
+  geom_line(aes(y = I + D + A + R + T), color = "red", linetype = "solid") +
+  geom_line(aes(y = H), color = "green", linetype = "solid") +
+  geom_line(aes(y = E), color = "black", linetype = "solid") +
+  geom_line(aes(y = D + R + T + E + diagnosed_H), color = "blue", linetype = "dotted") +
+  geom_line(aes(y = D + R + T), color = "red", linetype = "dotted") +
+  geom_line(aes(y = diagnosed_H), color = "green", linetype = "dotted") +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "Fig. 4c: Predicted epidemic evolution: actual vs diagnosed cases of infection (widespread testing; weakened lockdown)") +
+  scale_x_continuous(limits = c(min(t), 350), breaks = seq(50, 350, by = 50)) +
+  scale_y_continuous(limits = c(0, 0.015)) +
+  theme_minimal()
+
+# Custom legend
+legend_data <- data.frame(
+  x = min(t),
+  y = seq(0.014, 0.008, length.out = 7),
+  color = c("blue", "red", "green", "black", "blue", "red", "green"),
+  linetype = c("solid", "solid", "solid", "solid", "dotted", "dotted", "dotted"),
+  label = c("Cumulative Infected", "Current Total Infected", "Recovered", "Deaths", "Diagnosed Cumulative Infected", "Diagnosed Current Total Infected", "Diagnosed Recovered")
+)
+
+plot11 <- plot11 +
+  geom_segment(data = legend_data, aes(x = x, xend = x + 5, y = y, yend = y, color = color, linetype = linetype), size = 1) +
+  geom_text(data = legend_data, aes(x = x + 7, y = y, label = label), hjust = 0) +
+  scale_color_identity(guide = "none") +
+  scale_linetype_identity(guide = "none") +
+  theme(legend.position = "none")
+
+print(plot11)
+
+ggsave("fig4c.pdf", plot = plot11, width = 24, height = 16, units = "cm")
 
 ```
-Long-term evolution of infected subpopulations
 
+
+## Fig. 4d: Predicted evolution of infected subpopulations (widespread testing; weakened lockdown)
 ```{r}
-plot2 <- ggplot(data.frame(t = t, I = I, D = D, A = A, R = R, T = T), aes(t)) +
-  geom_line(aes(y = I, color = "Infected ND AS")) +
-  geom_line(aes(y = D, color = "Infected D AS")) +
-  geom_line(aes(y = A, color = "Infected ND S")) +
-  geom_line(aes(y = R, color = "Infected D S")) +
-  geom_line(aes(y = T, color = "Infected D IC")) +
-  labs(x = "Time (days)", y = "Cases (fraction of the population)") +
-  scale_color_manual(values = c("Infected ND AS" = "blue", "Infected D AS" = "cyan", "Infected ND S" = "green", "Infected D S" = "magenta", "Infected D IC" = "red")) +
-  theme_minimal() +
-  theme(legend.position = "northeast")
-print(plot2)
-```
+# Assuming data is loaded as data.frame with columns t, I, D, A, R, T
+# Replace the data.frame below with your actual data.frame
+data <- data.frame(t = t, I = I, D = D, A = A, R = R, T = T)
 
+plot12 <- ggplot(data, aes(t)) +
+  geom_line(aes(y = I), color = "blue") +
+  geom_line(aes(y = D), color = "cyan") +
+  geom_line(aes(y = A), color = "green") +
+  geom_line(aes(y = R), color = "magenta") +
+  geom_line(aes(y = T), color = "red") +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "Fig. 4d: Predicted evolution of infected subpopulations (widespread testing; weakened lockdown)") +
+  scale_x_continuous(breaks = seq(50, 350, by = 50)) +
+    ylim(0, 1.1e-3) +
+  theme_minimal()
+
+# Custom legend
+legend_data <- data.frame(
+  x = max(t) - 50,
+  y = seq(0.0009, 0.0006, length.out = 5),
+  color = c("blue", "cyan", "green", "magenta", "red"),
+  label = c("Infected ND AS", "Infected D AS", "Infected ND S", "Infected D S", "Infected D IC")
+)
+
+plot12 <- plot12 +
+  geom_segment(data = legend_data, aes(x = x, xend = x + 5, y = y, yend = y, color = color), size = 1) +
+  geom_text(data = legend_data, aes(x = x + 7, y = y, label = label), hjust = 0) +
+  scale_color_identity(guide = "none") +
+  theme(legend.position = "none")
+
+print(plot12)
+
+ggsave("fig4d.pdf", plot = plot4, width = 24, height = 16, units = "cm")
+
+```
