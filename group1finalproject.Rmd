@@ -316,7 +316,7 @@ plot1 <- ggplot(data.frame(t = t, actual_infected = actual_infected, I = I, D = 
   geom_line(aes(y = D + R + T + E + diagnosed_H), color = "blue", linetype = "dotted") +
   geom_line(aes(y = D + R + T), color = "red", linetype = "dotted") +
   geom_line(aes(y = diagnosed_H), color = "green", linetype = "dotted") +
-  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "Fig. 2a: Short-term evolution: actual vs diagnosed cases of infection") +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "2a: Short-term evolution: actual vs diagnosed cases of infection") +
   scale_x_continuous(limits = c(0, 46), breaks = seq(5,45, by = 5)) +
   scale_y_continuous(limits = c(0, 0.015)) +
   theme_minimal()
@@ -352,7 +352,7 @@ plot2 <- ggplot(data.frame(t = t, I = I, D = D, A = A, R = R, T = T), aes(t)) +
   geom_line(aes(y = A), color = "green") +
   geom_line(aes(y = R), color = "magenta") +
   geom_line(aes(y = T), color = "red") +
-  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "Fig. 2b: Short-term evolution of infected subpopulations") +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "2b: Short-term evolution of infected subpopulations") +
   scale_y_continuous(limits = c(0, 1.1e-3)) +
     scale_x_continuous(limits = c(0, 46), breaks = seq(5,45, by = 5)) +
   theme_minimal()
@@ -386,7 +386,7 @@ plot3 <- ggplot(data.frame(t = t, actual_infected = actual_infected, I = I, D = 
   geom_line(aes(y = D + R + T + E + diagnosed_H), color = "blue", linetype = "dotted") +
   geom_line(aes(y = D + R + T), color = "red", linetype = "dotted") +
   geom_line(aes(y = diagnosed_H), color = "green", linetype = "dotted") +
-  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "Fig. 2c: Long-term evolution: actual vs diagnosed cases of infection") +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "2c: Long-term evolution: actual vs diagnosed cases of infection") +
     scale_x_continuous(limits = c(min(t), max(t)), breaks = seq(50,350, by = 50)) +
   scale_y_continuous(limits = c(0, 0.015)) +
   theme_minimal()
@@ -422,7 +422,7 @@ plot4 <- ggplot(data.frame(t = t, I = I, D = D, A = A, R = R, T = T), aes(t)) +
   geom_line(aes(y = A), color = "green") +
   geom_line(aes(y = R), color = "magenta") +
   geom_line(aes(y = T), color = "red") +
-  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "Fig. 2d: Long-term evolution of infected subpopulations") +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "2d: Long-term evolution of infected subpopulations") +
       scale_x_continuous(limits = c(min(t), max(t)), breaks = seq(50,350, by = 50)) +
   scale_y_continuous(limits = c(0, 1.1e-3)) +
   theme_minimal()
@@ -777,7 +777,7 @@ plot5 <- ggplot(df, aes(x = t)) +
   geom_line(aes(y = D + R + T + E + diagnosed_H), color = "blue", linetype = "dotted") +
   geom_line(aes(y = D + R + T), color = "red", linetype = "dotted") +
   geom_line(aes(y = diagnosed_H), color = "green", linetype = "dotted") +
-  labs(title = "Fig 3a: Predicted epidemic evolution: actual vs diagnosed cases of infection (weakened lockdown)", x = "Time (days)", y = "Cases (fraction of the population)") +
+  labs(title = "3a: Predicted epidemic evolution: actual vs diagnosed cases of infection (weakened lockdown)", x = "Time (days)", y = "Cases (fraction of the population)") +
   scale_x_continuous(limits = c(min(t), max(t)), breaks = c(50, 100, 150, 200, 250, 300, 350)) +
   scale_y_continuous(limits = c(0, 0.015)) +
   theme_minimal() +
@@ -819,7 +819,7 @@ plot6 <- ggplot(df, aes(x = t)) +
   geom_line(aes(y = A), color = "green") +
   geom_line(aes(y = R), color = "magenta") +
   geom_line(aes(y = T), color = "red") +
-  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "Fig. 3b: Predicted evolution of infected subpopulations (weakened lockdown)") +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "3b: Predicted evolution of infected subpopulations (weakened lockdown)") +
   scale_y_continuous(limits = c(0, 1.1e-3)) +
   scale_x_continuous(limits = c(min(t), max(t)), breaks = seq(50, 350, by = 50)) +
   theme_minimal()
@@ -1178,7 +1178,7 @@ plot7 <- ggplot(data, aes(t)) +
   geom_line(aes(y = D + R + T + E + diagnosed_H), color = "blue", linetype = "dotted") +
   geom_line(aes(y = D + R + T), color = "red", linetype = "dotted") +
   geom_line(aes(y = diagnosed_H), color = "green", linetype = "dotted") +
-  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "Fig. 3c: Predicted epidemic evolution: actual vs diagnosed cases of infection (strengthened lockdown)") +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "3c: Predicted epidemic evolution: actual vs diagnosed cases of infection (strengthened lockdown)") +
     scale_x_continuous(limits = c(min(t), max(t)), breaks = seq(50,350, by = 50)) +
   scale_y_continuous(limits = c(0, 0.015)) +
   theme_minimal()
@@ -1218,7 +1218,7 @@ plot8 <- ggplot(data, aes(t)) +
   geom_line(aes(y = A), color = "green") +
   geom_line(aes(y = R), color = "magenta") +
   geom_line(aes(y = T), color = "red") +
-  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "Fig. 3d: Predicted evolution of infected subpopulations (strengthened lockdown)") +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "3d: Predicted evolution of infected subpopulations (strengthened lockdown)") +
   scale_x_continuous(breaks = seq(50, 350, by = 50)) +
     ylim(0, 1.1e-3) +
   theme_minimal()
@@ -1590,7 +1590,7 @@ plot9 <- ggplot(data, aes(t)) +
   geom_line(aes(y = D + R + T + E + diagnosed_H), color = "blue", linetype = "dotted") +
   geom_line(aes(y = D + R + T), color = "red", linetype = "dotted") +
   geom_line(aes(y = diagnosed_H), color = "green", linetype = "dotted") +
-  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "Fig. 4a: Predicted epidemic evolution: actual vs diagnosed cases of infection (widespread testing)") +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "4a: Predicted epidemic evolution: actual vs diagnosed cases of infection (widespread testing)") +
   scale_x_continuous(limits = c(min(t), max(t)), breaks = c(50, 100, 150, 200, 250, 300, 350)) +
   ylim(0, 0.015) +
   theme_minimal()
@@ -1635,7 +1635,7 @@ plot10 <- ggplot(df, aes(x = t)) +
   geom_line(aes(y = A), color = "green") +
   geom_line(aes(y = R), color = "magenta") +
   geom_line(aes(y = T), color = "red") +
-  labs(title = "Fig. 4b: Predicted evolution of infected subpopulations (widespread testing)", x = "Time (days)", y = "Cases (fraction of the population)") +
+  labs(title = "4b: Predicted evolution of infected subpopulations (widespread testing)", x = "Time (days)", y = "Cases (fraction of the population)") +
   scale_y_continuous(limits = c(0, 1.1e-3)) +
   scale_x_continuous(limits = c(min(t), 350), breaks = seq(50, 350, by = 50)) +
   theme_minimal()
@@ -2016,7 +2016,7 @@ plot11 <- ggplot(data, aes(t)) +
   geom_line(aes(y = D + R + T + E + diagnosed_H), color = "blue", linetype = "dotted") +
   geom_line(aes(y = D + R + T), color = "red", linetype = "dotted") +
   geom_line(aes(y = diagnosed_H), color = "green", linetype = "dotted") +
-  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "Fig. 4c: Predicted epidemic evolution: actual vs diagnosed cases of infection (widespread testing; weakened lockdown)") +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "4c: Predicted epidemic evolution: actual vs diagnosed cases of infection (testing & weakened lockdown)") +
   scale_x_continuous(limits = c(min(t), 350), breaks = seq(50, 350, by = 50)) +
   scale_y_continuous(limits = c(0, 0.015)) +
   theme_minimal()
@@ -2056,7 +2056,7 @@ plot12 <- ggplot(data, aes(t)) +
   geom_line(aes(y = A), color = "green") +
   geom_line(aes(y = R), color = "magenta") +
   geom_line(aes(y = T), color = "red") +
-  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "Fig. 4d: Predicted evolution of infected subpopulations (widespread testing; weakened lockdown)") +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "4d: Predicted evolution of infected subpopulations (testing & weakened lockdown)") +
   scale_x_continuous(breaks = seq(50, 350, by = 50)) +
     ylim(0, 1.1e-3) +
   theme_minimal()
