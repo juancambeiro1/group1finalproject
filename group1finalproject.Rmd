@@ -1239,7 +1239,7 @@ plot8 <- plot8 +
 
 print(plot8)
 
-ggsave("fig3d.pdf", plot = plot4, width = 24, height = 16, units = "cm")
+ggsave("fig3d.pdf", plot = plot8, width = 24, height = 16, units = "cm")
 
 ```
 
