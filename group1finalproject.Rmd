@@ -2016,7 +2016,7 @@ plot11 <- ggplot(data, aes(t)) +
   geom_line(aes(y = D + R + T + E + diagnosed_H), color = "blue", linetype = "dotted") +
   geom_line(aes(y = D + R + T), color = "red", linetype = "dotted") +
   geom_line(aes(y = diagnosed_H), color = "green", linetype = "dotted") +
-  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "4c: Predicted epidemic evolution: actual vs diagnosed cases of infection (testing & weakened lockdown)") +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "4c: Predicted epidemic evolution: actual vs diagnosed cases of infection (widespread testing & weakened lockdown)") +
   scale_x_continuous(limits = c(min(t), 350), breaks = seq(50, 350, by = 50)) +
   scale_y_continuous(limits = c(0, 0.015)) +
   theme_minimal()
@@ -2056,7 +2056,7 @@ plot12 <- ggplot(data, aes(t)) +
   geom_line(aes(y = A), color = "green") +
   geom_line(aes(y = R), color = "magenta") +
   geom_line(aes(y = T), color = "red") +
-  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "4d: Predicted evolution of infected subpopulations (testing & weakened lockdown)") +
+  labs(x = "Time (days)", y = "Cases (fraction of the population)", title = "4d: Predicted evolution of infected subpopulations (widespread testing & weakened lockdown)") +
   scale_x_continuous(breaks = seq(50, 350, by = 50)) +
     ylim(0, 1.1e-3) +
   theme_minimal()
@@ -2077,6 +2077,6 @@ plot12 <- plot12 +
 
 print(plot12)
 
-ggsave("fig4d.pdf", plot = plot4, width = 24, height = 16, units = "cm")
+ggsave("fig4d.pdf", plot = plot12, width = 24, height = 16, units = "cm")
 
 ```
